@@ -17,6 +17,7 @@
       <nav class="site-nav">
         <a href="#home">Beranda</a>
         <a href="#dashboard">Dashboard</a>
+        <a href="#ppdb">PPDB</a>
         <a href="#about">Tentang</a>
         <a href="#program">Program</a>
         <a href="#teachers">Guru</a>
@@ -85,6 +86,58 @@
             <li><strong>22 Juni:</strong> Aktivitas ekskul olahraga kembali berjalan seperti biasa.</li>
             <li><strong>25 Juni:</strong> Workshop literasi digital untuk kelas X dan XI.</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="ppdb" class="section section-light">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">PPDB</span>
+          <h3>Pendaftaran Siswa Baru</h3>
+          <p>Isi formulir online, unggah berkas, dan dapatkan nomor pendaftaran otomatis.</p>
+        </div>
+        <div class="ppdb-grid">
+          <form class="ppdb-form" action="#" method="post" enctype="multipart/form-data">
+            <div class="form-row">
+              <label for="fullName">Nama lengkap</label>
+              <input id="fullName" name="fullName" type="text" placeholder="Nama calon siswa" required />
+            </div>
+            <div class="form-row">
+              <label for="emailPpdb">Email</label>
+              <input id="emailPpdb" name="email" type="email" placeholder="email@contoh.com" required />
+            </div>
+            <div class="form-row">
+              <label for="phone">Nomor telepon</label>
+              <input id="phone" name="phone" type="tel" placeholder="08xxxxxxxxxx" required />
+            </div>
+            <div class="form-row">
+              <label for="birthDate">Tanggal lahir</label>
+              <input id="birthDate" name="birthDate" type="date" required />
+            </div>
+            <div class="form-row">
+              <label for="originSchool">Asal sekolah</label>
+              <input id="originSchool" name="originSchool" type="text" placeholder="SMP Negeri 1 Contoh" required />
+            </div>
+            <div class="form-row">
+              <label for="documents">Unggah berkas (KTP, rapor, akta lahir)</label>
+              <input id="documents" name="documents" type="file" accept="application/pdf,image/*" multiple required />
+              <div class="file-list" aria-live="polite"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Kirim Pendaftaran</button>
+          </form>
+
+          <aside class="ppdb-status-panel">
+            <div class="status-card">
+              <span class="status-title">Nomor Pendaftaran</span>
+              <strong id="registrationNumber">-</strong>
+            </div>
+            <div class="status-card">
+              <span class="status-title">Status Pendaftaran</span>
+              <strong id="registrationStatus">Menunggu pengisian</strong>
+            </div>
+            <p class="status-note">Setelah mengirim formulir, nomor pendaftaran akan dibuat otomatis dan status akan diperbarui.</p>
+          </aside>
         </div>
       </div>
     </section>

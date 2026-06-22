@@ -18,6 +18,7 @@
         <a href="#home">Beranda</a>
         <a href="#dashboard">Dashboard</a>
         <a href="#ppdb">PPDB</a>
+        <a href="#students">Manajemen Siswa</a>
         <a href="#about">Tentang</a>
         <a href="#program">Program</a>
         <a href="#teachers">Guru</a>
@@ -142,6 +143,92 @@
       </div>
     </section>
 
+    <section id="students" class="section section-dashboard">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Manajemen Siswa</span>
+          <h3>CRUD Siswa, Pencarian, Filter, dan Import/Export</h3>
+          <p>Kelola data siswa dengan mudah: tambah, edit, hapus, cari, filter, impor dari Excel, dan ekspor ke Excel atau PDF.</p>
+        </div>
+        <div class="student-toolbar">
+          <div class="toolbar-actions">
+            <button id="addStudentButton" class="btn btn-primary">Tambah Siswa</button>
+            <button id="importStudentButton" class="btn btn-secondary">Import Excel</button>
+            <button id="exportStudentExcel" class="btn btn-secondary">Export Excel</button>
+            <button id="exportStudentPdf" class="btn btn-secondary">Export PDF</button>
+          </div>
+          <div class="toolbar-filters">
+            <input id="studentSearch" type="search" placeholder="Cari nama atau jurusan..." />
+            <select id="studentClassFilter">
+              <option value="">Semua Kelas</option>
+              <option value="X">Kelas X</option>
+              <option value="XI">Kelas XI</option>
+              <option value="XII">Kelas XII</option>
+            </select>
+            <select id="studentStatusFilter">
+              <option value="">Semua Status</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Lulus">Lulus</option>
+              <option value="Tidak Aktif">Tidak Aktif</option>
+            </select>
+          </div>
+        </div>
+        <div class="student-panel">
+          <table class="student-table" id="studentTable">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+                <th>Jurusan</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="student-form-card hidden" id="studentFormCard">
+          <div class="student-form-header">
+            <h4 id="studentFormTitle">Tambah Siswa</h4>
+            <button class="close-button" id="closeStudentForm">×</button>
+          </div>
+          <form id="studentForm">
+            <input type="hidden" id="studentId" />
+            <div class="form-row">
+              <label for="studentName">Nama siswa</label>
+              <input id="studentName" name="studentName" type="text" placeholder="Nama lengkap" required />
+            </div>
+            <div class="form-row">
+              <label for="studentClass">Kelas</label>
+              <select id="studentClass" name="studentClass" required>
+                <option value="">Pilih kelas</option>
+                <option value="X">X</option>
+                <option value="XI">XI</option>
+                <option value="XII">XII</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="studentMajor">Jurusan</label>
+              <input id="studentMajor" name="studentMajor" type="text" placeholder="IPA / IPS / Bahasa" required />
+            </div>
+            <div class="form-row">
+              <label for="studentStatus">Status</label>
+              <select id="studentStatus" name="studentStatus" required>
+                <option value="Aktif">Aktif</option>
+                <option value="Lulus">Lulus</option>
+                <option value="Tidak Aktif">Tidak Aktif</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Simpan Data</button>
+          </form>
+        </div>
+        <input id="studentImport" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+      </div>
+    </section>
+
     <section id="about" class="section section-light">
       <div class="container section-grid">
         <div>
@@ -257,6 +344,9 @@
     </div>
   </footer>
 
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

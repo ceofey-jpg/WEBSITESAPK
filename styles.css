@@ -414,6 +414,126 @@ textarea {
   line-height: 1.7;
 }
 
+.student-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.toolbar-filters input,
+.toolbar-filters select {
+  min-width: 180px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+}
+
+.student-panel {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.student-table th,
+.student-table td {
+  padding: 1rem 0.95rem;
+  text-align: left;
+  border-bottom: 1px solid #e9eff8;
+}
+
+.student-table th {
+  background: #f8fbff;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.student-table tbody tr:hover {
+  background: #f7faff;
+}
+
+.student-table td:last-child {
+  min-width: 170px;
+}
+
+.student-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  position: relative;
+}
+
+.student-form-card.hidden {
+  display: none !important;
+}
+
+.student-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.student-form-header h4 {
+  margin: 0;
+}
+
+.close-button {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text);
+  line-height: 1;
+}
+
+.student-form-card form {
+  display: grid;
+  gap: 1rem;
+}
+
+.student-form-card select,
+.student-form-card input {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+}
+
+.hidden {
+  display: none !important;
+}
+
 .site-footer {
   background: #0f172a;
   color: #e2e8f0;

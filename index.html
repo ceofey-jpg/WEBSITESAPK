@@ -39,6 +39,51 @@
             <a href="#program" class="btn btn-secondary">Program Belajar</a>
           </div>
         </div>
+
+        <div class="manager-card" id="gradesManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Nilai & Raport</h3>
+            <p>Input nilai tugas, UTS, UAS; hitung nilai akhir otomatis; cetak raport PDF.</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <label for="gradeStudent">Siswa</label>
+              <select id="gradeStudent"></select>
+              <label for="gradeSubject">Mata Pelajaran</label>
+              <select id="gradeSubject"></select>
+              <label for="gradeTugas">Tugas</label>
+              <input id="gradeTugas" type="number" min="0" max="100" style="width:6rem;" />
+              <label for="gradeUTS">UTS</label>
+              <input id="gradeUTS" type="number" min="0" max="100" style="width:6rem;" />
+              <label for="gradeUAS">UAS</label>
+              <input id="gradeUAS" type="number" min="0" max="100" style="width:6rem;" />
+              <button id="saveGrade" class="btn btn-primary">Simpan Nilai</button>
+            </div>
+            <div class="toolbar-filters">
+              <label for="gradeSearch">Cari</label>
+              <input id="gradeSearch" type="search" placeholder="Cari nama atau mapel..." />
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <table class="student-table" id="gradesTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Nama</th>
+                  <th>Mata Pelajaran</th>
+                  <th>Tugas</th>
+                  <th>UTS</th>
+                  <th>UAS</th>
+                  <th>Nilai Akhir</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
         
         <div class="manager-card" id="attendanceManager" style="margin-top:1.5rem;">
           <div class="section-header">

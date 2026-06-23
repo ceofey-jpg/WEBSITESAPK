@@ -854,6 +854,160 @@ if (teacherSection) {
 
           populateClassSelects();
         }
+
+        /* --- Nilai & Raport --- */
+        const gradesSection = document.querySelector('#gradesManager');
+        if (gradesSection) {
+          const gradeStudentSelect = document.querySelector('#gradeStudent');
+          const gradeSubjectSelect = document.querySelector('#gradeSubject');
+          const gradeTugasInput = document.querySelector('#gradeTugas');
+          const gradeUTSInput = document.querySelector('#gradeUTS');
+          const gradeUASInput = document.querySelector('#gradeUAS');
+          const saveGradeBtn = document.querySelector('#saveGrade');
+          const gradesTableBody = document.querySelector('#gradesTable tbody');
+          const gradeSearch = document.querySelector('#gradeSearch');
+
+          let grades = JSON.parse(localStorage.getItem('grades') || '[]');
+          let editingGradeId = null;
+
+          function computeFinal(tugas, uts, uas) {
+            const t = Number(tugas) || 0;
+            const u = Number(uts) || 0;
+            const a = Number(uas) || 0;
+            return Number((t * 0.3 + u * 0.3 + a * 0.4).toFixed(2));
+          }
+
+          function saveGrades() {
+            localStorage.setItem('grades', JSON.stringify(grades));
+          }
+
+          function populateGradeStudentSelect() {
+            gradeStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name} — ${s.class || '-'} / ${s.major || '-'}</option>`).join('');
+          }
+
+          function populateGradeSubjectSelect() {
+            const subjList = JSON.parse(localStorage.getItem('subjects') || 'null') || [];
+            gradeSubjectSelect.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjList.map(s => `<option value="${s}">${s}</option>`).join('');
+          }
+
+          function renderGrades() {
+            const q = gradeSearch.value.trim().toLowerCase();
+            const rows = grades
+              .filter(g => {
+                const st = students.find(s => s.id === g.studentId);
+                return !q || (st && st.name.toLowerCase().includes(q)) || (g.subject && g.subject.toLowerCase().includes(q));
+              })
+              .map((g, idx) => {
+                const st = students.find(s => s.id === g.studentId) || { name: '—' };
+                return `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td>${st.name}</td>
+                    <td>${g.subject}</td>
+                    <td>${g.tugas}</td>
+                    <td>${g.uts}</td>
+                    <td>${g.uas}</td>
+                    <td>${g.final}</td>
+                    <td>
+                      <button class="btn btn-secondary edit-grade" data-id="${g.id}">Edit</button>
+                      <button class="btn btn-secondary delete-grade" data-id="${g.id}">Hapus</button>
+                      <button class="btn btn-secondary print-grade" data-id="${g.id}">Cetak Raport</button>
+                    </td>
+                  </tr>
+                `;
+              }).join('');
+            gradesTableBody.innerHTML = rows || '<tr><td colspan="8">Belum ada nilai.</td></tr>';
+          }
+
+          function resetGradeForm() {
+            editingGradeId = null;
+            gradeStudentSelect.value = '';
+            gradeSubjectSelect.value = '';
+            gradeTugasInput.value = '';
+            gradeUTSInput.value = '';
+            gradeUASInput.value = '';
+          }
+
+          saveGradeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const studentId = Number(gradeStudentSelect.value);
+            const subject = gradeSubjectSelect.value.trim();
+            const tugas = Number(gradeTugasInput.value);
+            const uts = Number(gradeUTSInput.value);
+            const uas = Number(gradeUASInput.value);
+            if (!studentId || !subject) { alert('Pilih siswa dan mata pelajaran.'); return; }
+            const final = computeFinal(tugas, uts, uas);
+            if (editingGradeId) {
+              const g = grades.find(x => x.id === editingGradeId);
+              if (g) { g.studentId = studentId; g.subject = subject; g.tugas = tugas; g.uts = uts; g.uas = uas; g.final = final; }
+              alert('Nilai diperbarui.');
+            } else {
+              const id = grades.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+              grades.push({ id, studentId, subject, tugas, uts, uas, final });
+              alert('Nilai disimpan.');
+            }
+            saveGrades();
+            renderGrades();
+            resetGradeForm();
+          });
+
+          gradesTableBody.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-grade');
+            const delBtn = e.target.closest('.delete-grade');
+            const printBtn = e.target.closest('.print-grade');
+            if (editBtn) {
+              const id = Number(editBtn.dataset.id);
+              const g = grades.find(x => x.id === id);
+              if (!g) return;
+              editingGradeId = id;
+              gradeStudentSelect.value = g.studentId;
+              gradeSubjectSelect.value = g.subject;
+              gradeTugasInput.value = g.tugas;
+              gradeUTSInput.value = g.uts;
+              gradeUASInput.value = g.uas;
+            }
+            if (delBtn) {
+              const id = Number(delBtn.dataset.id);
+              if (confirm('Hapus nilai?')) {
+                grades = grades.filter(x => x.id !== id);
+                saveGrades();
+                renderGrades();
+              }
+            }
+            if (printBtn) {
+              const id = Number(printBtn.dataset.id);
+              const g = grades.find(x => x.id === id);
+              if (g) printRaportForStudent(g.studentId);
+            }
+          });
+
+          gradeSearch.addEventListener('input', renderGrades);
+
+          function printRaportForStudent(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) { alert('Siswa tidak ditemukan.'); return; }
+            const studentGrades = grades.filter(g => g.studentId === studentId);
+            const rows = studentGrades.map(g => [g.subject, g.tugas, g.uts, g.uas, g.final]);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text('Raport Siswa', 14, 18);
+            doc.setFontSize(12);
+            doc.text(`Nama: ${student.name}`, 14, 28);
+            doc.text(`Kelas: ${student.class || '-'}`, 14, 36);
+            doc.autoTable({ startY: 44, head: [['Mata Pelajaran','Tugas','UTS','UAS','Nilai Akhir']], body: rows, theme:'grid' });
+            // average
+            if (rows.length) {
+              const avg = (studentGrades.reduce((s,x)=>s+x.final,0)/studentGrades.length).toFixed(2);
+              doc.text(`Rata-rata Nilai Akhir: ${avg}`, 14, doc.lastAutoTable.finalY + 10);
+            }
+            doc.save(`raport-${student.name.replace(/\s+/g,'-')}.pdf`);
+          }
+
+          populateGradeStudentSelect();
+          populateGradeSubjectSelect();
+          renderGrades();
+        }
     }
   });
 

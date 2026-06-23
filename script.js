@@ -973,6 +973,95 @@ if (teacherSection) {
                 saveGrades();
                 renderGrades();
               }
+
+                /* --- Jadwal Pelajaran (CRUD) --- */
+                const scheduleSection = document.querySelector('#scheduleManager');
+                if (scheduleSection) {
+                  const scheduleClass = document.querySelector('#scheduleClass');
+                  const scheduleTeacher = document.querySelector('#scheduleTeacher');
+                  const scheduleSubject = document.querySelector('#scheduleSubject');
+                  const scheduleDay = document.querySelector('#scheduleDay');
+                  const scheduleStart = document.querySelector('#scheduleStart');
+                  const scheduleEnd = document.querySelector('#scheduleEnd');
+                  const addScheduleBtn = document.querySelector('#addSchedule');
+                  const schedulesTableBody = document.querySelector('#schedulesTable tbody');
+                  const viewScheduleClass = document.querySelector('#viewScheduleClass');
+
+                  function loadSchedules() { return JSON.parse(localStorage.getItem('schedules') || '[]'); }
+                  function saveSchedules(list) { localStorage.setItem('schedules', JSON.stringify(list)); }
+
+                  function loadTeachersLocal() { return JSON.parse(localStorage.getItem('teachers') || '[]'); }
+                  function loadSubjectsLocal() { return JSON.parse(localStorage.getItem('subjects') || '[]'); }
+                  function loadClassesLocal() { return JSON.parse(localStorage.getItem('classes') || '[]'); }
+
+                  function populateScheduleSelects() {
+                    const classes = loadClassesLocal();
+                    const teachers = loadTeachersLocal();
+                    const subjects = loadSubjectsLocal();
+                    scheduleClass.innerHTML = '<option value="">Pilih kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+                    viewScheduleClass.innerHTML = '<option value="">Semua Kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+                    scheduleTeacher.innerHTML = '<option value="">Pilih guru</option>' + teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+                    scheduleSubject.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
+                  }
+
+                  function renderSchedules(filterClass='') {
+                    const schedules = loadSchedules();
+                    const teachers = loadTeachersLocal();
+                    const rows = schedules
+                      .filter(s => !filterClass || s.class === filterClass)
+                      .map((s, idx) => {
+                        const t = teachers.find(x=>x.id === Number(s.teacherId));
+                        return `
+                          <tr>
+                            <td>${idx+1}</td>
+                            <td>${s.class}</td>
+                            <td>${s.day}</td>
+                            <td>${s.start} - ${s.end}</td>
+                            <td>${s.subject}</td>
+                            <td>${t ? t.name : '-'}</td>
+                            <td>
+                              <button class="btn btn-secondary delete-schedule" data-id="${s.id}">Hapus</button>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('');
+                    schedulesTableBody.innerHTML = rows || '<tr><td colspan="7">Belum ada jadwal.</td></tr>';
+                  }
+
+                  addScheduleBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const cls = scheduleClass.value;
+                    const teacherId = scheduleTeacher.value;
+                    const subj = scheduleSubject.value;
+                    const day = scheduleDay.value;
+                    const start = scheduleStart.value;
+                    const end = scheduleEnd.value;
+                    if (!cls || !teacherId || !subj || !day || !start || !end) { alert('Lengkapi data jadwal.'); return; }
+                    const schedules = loadSchedules();
+                    const id = schedules.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
+                    schedules.push({ id, class: cls, teacherId, subject: subj, day, start, end });
+                    saveSchedules(schedules);
+                    renderSchedules(viewScheduleClass.value);
+                    alert('Jadwal ditambahkan.');
+                  });
+
+                  schedulesTableBody.addEventListener('click', (e) => {
+                    const del = e.target.closest('.delete-schedule');
+                    if (!del) return;
+                    const id = Number(del.dataset.id);
+                    if (confirm('Hapus jadwal?')) {
+                      let list = loadSchedules();
+                      list = list.filter(s => s.id !== id);
+                      saveSchedules(list);
+                      renderSchedules(viewScheduleClass.value);
+                    }
+                  });
+
+                  viewScheduleClass.addEventListener('change', () => renderSchedules(viewScheduleClass.value));
+
+                  populateScheduleSelects();
+                  renderSchedules();
+                }
             }
             if (printBtn) {
               const id = Number(printBtn.dataset.id);

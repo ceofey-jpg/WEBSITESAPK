@@ -182,6 +182,50 @@
             </table>
           </div>
         </div>
+
+        <div class="manager-card" id="financeManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Keuangan Sekolah</h3>
+            <p>SPP, pembayaran, tunggakan, dan bukti pembayaran.</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <label for="sppAmount">SPP / bulan</label>
+              <input id="sppAmount" type="number" min="0" style="width:8rem;" />
+              <label for="payStudent">Siswa</label>
+              <select id="payStudent"><option value="">Pilih siswa</option></select>
+              <label for="payMonth">Bulan</label>
+              <input id="payMonth" type="month" />
+              <label for="payAmount">Jumlah</label>
+              <input id="payAmount" type="number" min="0" style="width:8rem;" />
+              <button id="addPayment" class="btn btn-primary">Tambah Pembayaran</button>
+            </div>
+            <div class="toolbar-filters">
+              <label for="filterStudent">Filter Siswa</label>
+              <select id="filterStudent"><option value="">Semua</option></select>
+              <button id="computeOutstanding" class="btn btn-secondary">Hitung Tunggakan</button>
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <table class="student-table" id="paymentsTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Nama</th>
+                  <th>Bulan</th>
+                  <th>Jumlah</th>
+                  <th>Tanggal</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <div id="outstandingSummary" style="margin-top:1rem;"></div>
+          </div>
+        </div>
         <div class="hero-card">
           <h3>Informasi Terbaru</h3>
           <ul>

@@ -1062,6 +1062,130 @@ if (teacherSection) {
                   populateScheduleSelects();
                   renderSchedules();
                 }
+
+                /* --- Keuangan Sekolah: SPP dan Pembayaran --- */
+                const financeSection = document.querySelector('#financeManager');
+                if (financeSection) {
+                  const sppAmountInput = document.querySelector('#sppAmount');
+                  const payStudentSelect = document.querySelector('#payStudent');
+                  const payMonthInput = document.querySelector('#payMonth');
+                  const payAmountInput = document.querySelector('#payAmount');
+                  const addPaymentBtn = document.querySelector('#addPayment');
+                  const paymentsTableBody = document.querySelector('#paymentsTable tbody');
+                  const filterStudentSelect = document.querySelector('#filterStudent');
+                  const computeOutstandingBtn = document.querySelector('#computeOutstanding');
+                  const outstandingSummary = document.querySelector('#outstandingSummary');
+
+                  let payments = JSON.parse(localStorage.getItem('payments') || '[]');
+
+                  function savePayments() { localStorage.setItem('payments', JSON.stringify(payments)); }
+
+                  function populateFinanceStudentSelects() {
+                    payStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                    filterStudentSelect.innerHTML = '<option value="">Semua</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                  }
+
+                  function renderPayments(filterStudentId='') {
+                    const rows = payments
+                      .filter(p => !filterStudentId || String(p.studentId) === String(filterStudentId))
+                      .map((p, idx) => {
+                        const s = students.find(st => st.id === p.studentId) || { name: '-' };
+                        return `
+                          <tr>
+                            <td>${idx+1}</td>
+                            <td>${s.name}</td>
+                            <td>${p.month}</td>
+                            <td>${p.amount}</td>
+                            <td>${p.date}</td>
+                            <td>
+                              <button class="btn btn-secondary print-payment" data-id="${p.id}">Bukti</button>
+                              <button class="btn btn-secondary delete-payment" data-id="${p.id}">Hapus</button>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('');
+                    paymentsTableBody.innerHTML = rows || '<tr><td colspan="6">Belum ada pembayaran.</td></tr>';
+                  }
+
+                  function addPayment() {
+                    const studentId = Number(payStudentSelect.value);
+                    const month = payMonthInput.value;
+                    const amount = Number(payAmountInput.value) || 0;
+                    if (!studentId || !month || amount <= 0) { alert('Lengkapi data pembayaran.'); return; }
+                    const id = payments.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
+                    const date = new Date().toLocaleDateString();
+                    payments.push({ id, studentId, month, amount, date });
+                    savePayments();
+                    renderPayments(filterStudentSelect.value);
+                    payMonthInput.value = '';
+                    payAmountInput.value = '';
+                    alert('Pembayaran tercatat.');
+                  }
+
+                  function computeOutstanding(studentId) {
+                    const sppPerMonth = Number(sppAmountInput.value) || 0;
+                    if (!sppPerMonth) { outstandingSummary.innerHTML = '<p style="color:#c00;">Tentukan SPP per bulan terlebih dahulu.</p>'; return; }
+                    const paidRecords = payments.filter(p => p.studentId === studentId);
+                    // For simplicity, assume year months from Jan to Dec of current year
+                    const months = Array.from({length:12}, (_,i)=>{
+                      const d = new Date(); d.setMonth(i); return `${d.getFullYear()}-${String(i+1).padStart(2,'0')}`;
+                    });
+                    const unpaid = months.filter(m => !paidRecords.find(p => p.month === m));
+                    const totalDue = sppPerMonth * months.length;
+                    const totalPaid = paidRecords.reduce((s,p)=>s+p.amount,0);
+                    const balance = totalDue - totalPaid;
+                    outstandingSummary.innerHTML = `
+                      <p><strong>Total SPP (tahun):</strong> ${totalDue}</p>
+                      <p><strong>Total Dibayar:</strong> ${totalPaid}</p>
+                      <p><strong>Sisa / Tunggakan:</strong> ${balance}</p>
+                      <p><strong>Bulan belum bayar:</strong> ${unpaid.join(', ')}</p>
+                    `;
+                  }
+
+                  function printPaymentReceipt(paymentId) {
+                    const p = payments.find(x=>x.id===paymentId);
+                    if (!p) return;
+                    const student = students.find(s=>s.id===p.studentId) || { name: '-' };
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFontSize(14);
+                    doc.text('Bukti Pembayaran SPP', 14, 18);
+                    doc.setFontSize(12);
+                    doc.text(`Nama: ${student.name}`, 14, 28);
+                    doc.text(`Bulan: ${p.month}`, 14, 36);
+                    doc.text(`Jumlah: ${p.amount}`, 14, 44);
+                    doc.text(`Tanggal: ${p.date}`, 14, 52);
+                    doc.save(`bukti-pembayaran-${student.name.replace(/\s+/g,'-')}-${p.id}.pdf`);
+                  }
+
+                  paymentsTableBody.addEventListener('click', (e) => {
+                    const printBtn = e.target.closest('.print-payment');
+                    const delBtn = e.target.closest('.delete-payment');
+                    if (printBtn) {
+                      const id = Number(printBtn.dataset.id);
+                      printPaymentReceipt(id);
+                    }
+                    if (delBtn) {
+                      const id = Number(delBtn.dataset.id);
+                      if (confirm('Hapus pembayaran?')) {
+                        payments = payments.filter(p=>p.id!==id);
+                        savePayments();
+                        renderPayments(filterStudentSelect.value);
+                      }
+                    }
+                  });
+
+                  addPaymentBtn.addEventListener('click', (e) => { e.preventDefault(); addPayment(); });
+                  filterStudentSelect.addEventListener('change', () => renderPayments(filterStudentSelect.value));
+                  computeOutstandingBtn.addEventListener('click', () => {
+                    const sid = Number(filterStudentSelect.value);
+                    if (!sid) { alert('Pilih siswa pada filter untuk menghitung tunggakan.'); return; }
+                    computeOutstanding(sid);
+                  });
+
+                  populateFinanceStudentSelects();
+                  renderPayments();
+                }
             }
             if (printBtn) {
               const id = Number(printBtn.dataset.id);

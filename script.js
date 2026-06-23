@@ -338,3 +338,247 @@ if (exportStudentPdfButton) {
 }
 
 renderStudents();
+
+/* --- Manajemen Guru, Mata Pelajaran, dan Wali Kelas (localStorage) --- */
+const teacherSection = document.querySelector('#teacherManager');
+if (teacherSection) {
+  const addTeacherButton = document.querySelector('#addTeacherButton');
+  const addSubjectButton = document.querySelector('#addSubjectButton');
+  const assignWaliButton = document.querySelector('#assignWaliButton');
+  const teacherSearch = document.querySelector('#teacherSearch');
+
+  const teachersTableBody = document.querySelector('#teachersTable tbody');
+  const subjectsTableBody = document.querySelector('#subjectsTable tbody');
+  const homeroomTableBody = document.querySelector('#homeroomTable tbody');
+
+  const teacherFormCard = document.querySelector('#teacherFormCard');
+  const teacherFormTitle = document.querySelector('#teacherFormTitle');
+  const teacherForm = document.querySelector('#teacherForm');
+  const teacherIdInput = document.querySelector('#teacherId');
+  const teacherNameInput = document.querySelector('#teacherName');
+  const teacherSubjectInput = document.querySelector('#teacherSubject');
+  const closeTeacherForm = document.querySelector('#closeTeacherForm');
+
+  const subjectFormCard = document.querySelector('#subjectFormCard');
+  const subjectForm = document.querySelector('#subjectForm');
+  const subjectIdInput = document.querySelector('#subjectId');
+  const subjectNameInput = document.querySelector('#subjectName');
+  const closeSubjectForm = document.querySelector('#closeSubjectForm');
+
+  const assignFormCard = document.querySelector('#assignFormCard');
+  const assignForm = document.querySelector('#assignForm');
+  const assignClassSelect = document.querySelector('#assignClass');
+  const assignTeacherSelect = document.querySelector('#assignTeacher');
+  const closeAssignForm = document.querySelector('#closeAssignForm');
+
+  let teachers = JSON.parse(localStorage.getItem('teachers') || 'null');
+  let subjects = JSON.parse(localStorage.getItem('subjects') || 'null');
+  let homerooms = JSON.parse(localStorage.getItem('homerooms') || 'null');
+
+  if (!teachers) {
+    teachers = [
+      { id: 1, name: 'Siti Aminah', subjects: ['Bahasa Indonesia'] },
+      { id: 2, name: 'Ahmad Yusuf', subjects: ['Matematika'] },
+      { id: 3, name: 'Maya Putri', subjects: ['Bahasa Inggris'] }
+    ];
+  }
+  if (!subjects) {
+    subjects = ['Matematika', 'Bahasa Inggris', 'Bahasa Indonesia', 'Fisika'];
+  }
+  if (!homerooms) {
+    homerooms = [{ class: 'X', teacherId: null }, { class: 'XI', teacherId: null }, { class: 'XII', teacherId: null }];
+  }
+
+  function saveAll() {
+    localStorage.setItem('teachers', JSON.stringify(teachers));
+    localStorage.setItem('subjects', JSON.stringify(subjects));
+    localStorage.setItem('homerooms', JSON.stringify(homerooms));
+  }
+
+  function renderTeachers() {
+    const q = teacherSearch.value.trim().toLowerCase();
+    const rows = teachers
+      .filter(t => !q || t.name.toLowerCase().includes(q) || (t.subjects || []).join(', ').toLowerCase().includes(q))
+      .map((t, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${t.name}</td>
+          <td>${(t.subjects || []).join(', ')}</td>
+          <td>
+            <button class="btn btn-secondary edit-teacher" data-id="${t.id}">Edit</button>
+            <button class="btn btn-secondary delete-teacher" data-id="${t.id}">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+    teachersTableBody.innerHTML = rows;
+    renderSubjects();
+    renderHomerooms();
+    populateAssignTeacherSelect();
+  }
+
+  function renderSubjects() {
+    subjectsTableBody.innerHTML = subjects.map((s, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${s}</td>
+        <td>
+          <button class="btn btn-secondary delete-subject" data-name="${s}">Hapus</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderHomerooms() {
+    homeroomTableBody.innerHTML = homerooms.map(h => {
+      const teacher = teachers.find(t => t.id === h.teacherId);
+      return `
+        <tr>
+          <td>${h.class}</td>
+          <td>${teacher ? teacher.name : '-'}</td>
+          <td><button class="btn btn-secondary edit-homeroom" data-class="${h.class}">Ubah</button></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function openTeacherForm(teacher = null) {
+    teacherFormCard.classList.remove('hidden');
+    if (teacher) {
+      teacherFormTitle.textContent = 'Edit Guru';
+      teacherIdInput.value = teacher.id;
+      teacherNameInput.value = teacher.name;
+      teacherSubjectInput.value = (teacher.subjects || []).join(', ');
+    } else {
+      teacherFormTitle.textContent = 'Tambah Guru';
+      teacherIdInput.value = '';
+      teacherForm.reset();
+    }
+  }
+
+  function closeTeacherFormCard() {
+    teacherFormCard.classList.add('hidden');
+    teacherForm.reset();
+    teacherIdInput.value = '';
+  }
+
+  function openSubjectForm() { subjectFormCard.classList.remove('hidden'); }
+  function closeSubjectFormCard() { subjectFormCard.classList.add('hidden'); subjectForm.reset(); }
+
+  function openAssignForm(defaultClass = '') {
+    assignFormCard.classList.remove('hidden');
+    assignClassSelect.value = defaultClass;
+    populateAssignTeacherSelect();
+  }
+  function closeAssignFormCard() { assignFormCard.classList.add('hidden'); assignForm.reset(); }
+
+  function populateAssignTeacherSelect() {
+    assignTeacherSelect.innerHTML = '<option value="">Pilih guru</option>' + teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  }
+
+  // Events
+  addTeacherButton.addEventListener('click', () => openTeacherForm());
+  closeTeacherForm.addEventListener('click', closeTeacherFormCard);
+  addSubjectButton.addEventListener('click', () => openSubjectForm());
+  closeSubjectForm.addEventListener('click', closeSubjectFormCard);
+  assignWaliButton.addEventListener('click', () => openAssignForm());
+  closeAssignForm.addEventListener('click', closeAssignFormCard);
+
+  teacherForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = teacherIdInput.value;
+    const name = teacherNameInput.value.trim();
+    const subj = teacherSubjectInput.value.split(',').map(s => s.trim()).filter(Boolean);
+    if (!name) { alert('Nama guru wajib diisi.'); return; }
+    if (id) {
+      const t = teachers.find(x => x.id === Number(id));
+      if (t) { t.name = name; t.subjects = subj; }
+      alert('Data guru diperbarui.');
+    } else {
+      const newId = teachers.reduce((max, x) => Math.max(max, x.id), 0) + 1;
+      teachers.push({ id: newId, name, subjects: subj });
+      alert('Guru baru ditambahkan.');
+    }
+    saveAll();
+    renderTeachers();
+    closeTeacherFormCard();
+  });
+
+  subjectForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = subjectNameInput.value.trim();
+    if (!name) { alert('Nama mata pelajaran wajib diisi.'); return; }
+    if (!subjects.includes(name)) {
+      subjects.push(name);
+      saveAll();
+      renderSubjects();
+      alert('Mata pelajaran ditambahkan.');
+    } else {
+      alert('Mata pelajaran sudah ada.');
+    }
+    closeSubjectFormCard();
+  });
+
+  assignForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cls = assignClassSelect.value;
+    const teacherId = Number(assignTeacherSelect.value) || null;
+    if (!cls || !teacherId) { alert('Pilih kelas dan guru.'); return; }
+    const found = homerooms.find(h => h.class === cls);
+    if (found) { found.teacherId = teacherId; }
+    saveAll();
+    renderHomerooms();
+    alert('Wali kelas berhasil ditugaskan.');
+    closeAssignFormCard();
+  });
+
+  // Table actions (delegation)
+  teachersTableBody.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-teacher');
+    const delBtn = e.target.closest('.delete-teacher');
+    if (editBtn) {
+      const id = Number(editBtn.dataset.id);
+      const t = teachers.find(x => x.id === id);
+      if (t) openTeacherForm(t);
+    }
+    if (delBtn) {
+      const id = Number(delBtn.dataset.id);
+      const t = teachers.find(x => x.id === id);
+      if (!t) return;
+      if (confirm(`Hapus guru ${t.name}?`)) {
+        teachers = teachers.filter(x => x.id !== id);
+        // remove homeroom assignments referencing this teacher
+        homerooms.forEach(h => { if (h.teacherId === id) h.teacherId = null; });
+        saveAll();
+        renderTeachers();
+      }
+    }
+  });
+
+  subjectsTableBody.addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.delete-subject');
+    if (delBtn) {
+      const name = delBtn.dataset.name;
+      if (confirm(`Hapus mata pelajaran ${name}?`)) {
+        subjects = subjects.filter(s => s !== name);
+        // remove from teachers
+        teachers.forEach(t => { t.subjects = (t.subjects || []).filter(s => s !== name); });
+        saveAll();
+        renderSubjects();
+        renderTeachers();
+      }
+    }
+  });
+
+  homeroomTableBody.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-homeroom');
+    if (editBtn) {
+      const cls = editBtn.dataset.class;
+      openAssignForm(cls);
+    }
+  });
+
+  teacherSearch.addEventListener('input', renderTeachers);
+
+  // initial render
+  renderTeachers();
+}

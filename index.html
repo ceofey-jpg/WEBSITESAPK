@@ -299,6 +299,117 @@
             <p>Guru Penjasorkes</p>
           </article>
         </div>
+
+        <div class="manager-card" id="teacherManager">
+          <div class="section-header">
+            <h3>Manajemen Guru</h3>
+            <p>CRUD Guru, Mata Pelajaran, dan Wali Kelas (penugasan).</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <button id="addTeacherButton" class="btn btn-primary">Tambah Guru</button>
+              <button id="addSubjectButton" class="btn btn-secondary">Tambah Mata Pelajaran</button>
+              <button id="assignWaliButton" class="btn btn-secondary">Tugaskan Wali Kelas</button>
+            </div>
+            <div class="toolbar-filters">
+              <input id="teacherSearch" type="search" placeholder="Cari nama atau mata pelajaran..." />
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <table class="student-table" id="teachersTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Nama</th>
+                  <th>Mata Pelajaran</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <table class="student-table" id="subjectsTable" style="margin-top:1rem;">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Mata Pelajaran</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <table class="student-table" id="homeroomTable" style="margin-top:1rem;">
+              <thead>
+                <tr>
+                  <th>Kelas</th>
+                  <th>Wali Kelas</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="student-form-card hidden" id="teacherFormCard">
+            <div class="student-form-header">
+              <h4 id="teacherFormTitle">Tambah Guru</h4>
+              <button class="close-button" id="closeTeacherForm">×</button>
+            </div>
+            <form id="teacherForm">
+              <input type="hidden" id="teacherId" />
+              <div class="form-row">
+                <label for="teacherName">Nama Guru</label>
+                <input id="teacherName" name="teacherName" type="text" placeholder="Nama lengkap" required />
+              </div>
+              <div class="form-row">
+                <label for="teacherSubject">Mata Pelajaran (pisah koma jika lebih dari satu)</label>
+                <input id="teacherSubject" name="teacherSubject" type="text" placeholder="Matematika, Fisika" />
+              </div>
+              <button type="submit" class="btn btn-primary">Simpan Guru</button>
+            </form>
+          </div>
+
+          <div class="student-form-card hidden" id="subjectFormCard">
+            <div class="student-form-header">
+              <h4 id="subjectFormTitle">Tambah Mata Pelajaran</h4>
+              <button class="close-button" id="closeSubjectForm">×</button>
+            </div>
+            <form id="subjectForm">
+              <input type="hidden" id="subjectId" />
+              <div class="form-row">
+                <label for="subjectName">Nama Mata Pelajaran</label>
+                <input id="subjectName" name="subjectName" type="text" placeholder="Matematika" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Simpan Mata Pelajaran</button>
+            </form>
+          </div>
+
+          <div class="student-form-card hidden" id="assignFormCard">
+            <div class="student-form-header">
+              <h4 id="assignFormTitle">Tugaskan Wali Kelas</h4>
+              <button class="close-button" id="closeAssignForm">×</button>
+            </div>
+            <form id="assignForm">
+              <div class="form-row">
+                <label for="assignClass">Kelas</label>
+                <select id="assignClass" required>
+                  <option value="">Pilih kelas</option>
+                  <option value="X">X</option>
+                  <option value="XI">XI</option>
+                  <option value="XII">XII</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="assignTeacher">Pilih Guru</label>
+                <select id="assignTeacher" required></select>
+              </div>
+              <button type="submit" class="btn btn-primary">Tugaskan</button>
+            </form>
+          </div>
+        </div>
       </div>
     </section>
 

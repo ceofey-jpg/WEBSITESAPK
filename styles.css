@@ -228,6 +228,14 @@ textarea {
   text-align: center;
 }
 
+.manager-card {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
 .team-card h4 {
   margin-bottom: 0.5rem;
 }

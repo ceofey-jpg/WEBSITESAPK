@@ -23,6 +23,7 @@
         </select>
         <p id="roleNotice" class="role-notice">Akses: Admin</p>
       </div>
+      <button id="darkModeToggle" class="btn btn-secondary">Mode Gelap</button>
       <button class="nav-toggle" aria-label="Buka navigasi">☰</button>
       <nav class="site-nav">
         <a href="#home">Beranda</a>
@@ -421,6 +422,15 @@
                 <option value="Tidak Aktif">Tidak Aktif</option>
               </select>
             </div>
+            <div class="form-row">
+              <label for="studentEmail">Email</label>
+              <input id="studentEmail" name="studentEmail" type="email" placeholder="email@domain.com" />
+            </div>
+            <div class="form-row">
+              <label for="studentPhoto">Foto Profil</label>
+              <input id="studentPhoto" name="studentPhoto" type="file" accept="image/*" />
+              <img id="studentPhotoPreview" class="photo-preview hidden" alt="Preview Foto Profil" />
+            </div>
             <button type="submit" class="btn btn-primary">Simpan Data</button>
           </form>
         </div>
@@ -545,6 +555,38 @@
 
           <div class="student-panel">
             <p style="color:var(--muted);">Gunakan kontrol di atas untuk memilih periode atau filter, lalu klik cetak.</p>
+          </div>
+        </div>
+
+        <div class="manager-card" id="systemManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Sistem & Notifikasi</h3>
+            <p>Backup data, restore, kirim notifikasi, dan lihat log aktivitas.</p>
+          </div>
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <button id="exportBackupButton" class="btn btn-secondary">Backup Data</button>
+              <button id="restoreBackupButton" class="btn btn-secondary">Restore Data</button>
+              <button id="clearLogsButton" class="btn btn-secondary">Bersihkan Log</button>
+              <input id="backupImportInput" type="file" accept=".json" class="hidden" />
+            </div>
+          </div>
+          <div class="student-toolbar">
+            <label for="notificationType">Saluran</label>
+            <select id="notificationType">
+              <option value="email">Email</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
+            <label for="notificationRecipient">Penerima</label>
+            <select id="notificationRecipient"><option value="">Pilih siswa</option></select>
+            <button id="sendNotificationButton" class="btn btn-primary">Kirim Notifikasi</button>
+          </div>
+          <div class="student-panel">
+            <textarea id="notificationMessage" placeholder="Tulis pesan notifikasi..." rows="3"></textarea>
+            <div class="activity-log">
+              <h4>Log Aktivitas Terbaru</h4>
+              <ul id="activityLogList" class="activity-log-list"></ul>
+            </div>
           </div>
         </div>
       </div>

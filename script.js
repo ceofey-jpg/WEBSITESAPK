@@ -74,15 +74,28 @@ const studentNameInput = document.querySelector('#studentName');
 const studentClassSelect = document.querySelector('#studentClass');
 const studentMajorInput = document.querySelector('#studentMajor');
 const studentStatusSelect = document.querySelector('#studentStatus');
+const studentEmailInput = document.querySelector('#studentEmail');
+const studentPhotoInput = document.querySelector('#studentPhoto');
+const studentPhotoPreview = document.querySelector('#studentPhotoPreview');
 const closeStudentForm = document.querySelector('#closeStudentForm');
 const studentImportInput = document.querySelector('#studentImport');
+const darkModeToggle = document.querySelector('#darkModeToggle');
+const exportBackupButton = document.querySelector('#exportBackupButton');
+const restoreBackupButton = document.querySelector('#restoreBackupButton');
+const backupImportInput = document.querySelector('#backupImportInput');
+const notificationTypeSelect = document.querySelector('#notificationType');
+const notificationRecipientSelect = document.querySelector('#notificationRecipient');
+const notificationMessageInput = document.querySelector('#notificationMessage');
+const sendNotificationButton = document.querySelector('#sendNotificationButton');
+const activityLogList = document.querySelector('#activityLogList');
+const clearLogsButton = document.querySelector('#clearLogsButton');
 
 let students = [
-  { id: 1, name: 'Alya Rahma', class: 'X', major: 'IPA', status: 'Aktif' },
-  { id: 2, name: 'Budi Santoso', class: 'XI', major: 'IPS', status: 'Aktif' },
-  { id: 3, name: 'Citra Dewi', class: 'XII', major: 'Bahasa', status: 'Lulus' },
-  { id: 4, name: 'Dandi Pratama', class: 'XI', major: 'IPA', status: 'Aktif' },
-  { id: 5, name: 'Eka Wulandari', class: 'X', major: 'IPS', status: 'Tidak Aktif' }
+  { id: 1, name: 'Alya Rahma', class: 'X', major: 'IPA', status: 'Aktif', email: 'alya@example.com', photo: '' },
+  { id: 2, name: 'Budi Santoso', class: 'XI', major: 'IPS', status: 'Aktif', email: 'budi@example.com', photo: '' },
+  { id: 3, name: 'Citra Dewi', class: 'XII', major: 'Bahasa', status: 'Lulus', email: 'citra@example.com', photo: '' },
+  { id: 4, name: 'Dandi Pratama', class: 'XI', major: 'IPA', status: 'Aktif', email: 'dandi@example.com', photo: '' },
+  { id: 5, name: 'Eka Wulandari', class: 'X', major: 'IPS', status: 'Tidak Aktif', email: 'eka@example.com', photo: '' }
 ];
 let nextStudentId = students.length + 1;
 
@@ -101,26 +114,34 @@ function renderStudents() {
     const classFilter = studentClassFilter.value;
     const statusFilter = studentStatusFilter.value;
 
-    const matchesSearch = !searchValue || student.name.toLowerCase().includes(searchValue) || student.major.toLowerCase().includes(searchValue);
+    const matchesSearch = !searchValue || student.name.toLowerCase().includes(searchValue) || student.major.toLowerCase().includes(searchValue) || (student.email || '').toLowerCase().includes(searchValue);
     const matchesClass = !classFilter || student.class === classFilter;
     const matchesStatus = !statusFilter || student.status === statusFilter;
 
     return matchesSearch && matchesClass && matchesStatus;
   });
 
-  studentTableBody.innerHTML = filtered.map((student, index) => `
-    <tr>
-      <td>${index + 1}</td>
-      <td>${student.name}</td>
-      <td>${student.class}</td>
-      <td>${student.major}</td>
-      <td>${student.status}</td>
-      <td>
-        <button class="btn btn-secondary edit-student" data-id="${student.id}">Edit</button>
-        <button class="btn btn-secondary delete-student" data-id="${student.id}">Hapus</button>
-      </td>
-    </tr>
-  `).join('');
+  studentTableBody.innerHTML = filtered.map((student, index) => {
+    const avatar = student.photo
+      ? `<img src="${student.photo}" class="avatar" alt="Foto ${student.name}" />`
+      : `<span class="avatar-placeholder">${student.name.split(' ').map((item) => item[0]).join('').slice(0, 2).toUpperCase()}</span>`;
+
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${avatar}</td>
+        <td>${student.name}</td>
+        <td>${student.class}</td>
+        <td>${student.major}</td>
+        <td>${student.status}</td>
+        <td>${student.email || '-'}</td>
+        <td>
+          <button class="btn btn-secondary edit-student" data-id="${student.id}">Edit</button>
+          <button class="btn btn-secondary delete-student" data-id="${student.id}">Hapus</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function openStudentForm(student = null) {
@@ -132,10 +153,20 @@ function openStudentForm(student = null) {
     studentClassSelect.value = student.class;
     studentMajorInput.value = student.major;
     studentStatusSelect.value = student.status;
+    studentEmailInput.value = student.email || '';
+    if (student.photo) {
+      studentPhotoPreview.src = student.photo;
+      studentPhotoPreview.classList.remove('hidden');
+    } else {
+      studentPhotoPreview.src = '';
+      studentPhotoPreview.classList.add('hidden');
+    }
   } else {
     studentFormTitle.textContent = 'Tambah Siswa';
     studentIdInput.value = '';
     studentForm.reset();
+    studentPhotoPreview.src = '';
+    studentPhotoPreview.classList.add('hidden');
   }
 }
 
@@ -143,6 +174,126 @@ function closeStudentFormCard() {
   studentFormCard.classList.add('hidden');
   studentForm.reset();
   studentIdInput.value = '';
+  studentPhotoPreview.src = '';
+  studentPhotoPreview.classList.add('hidden');
+}
+
+function readImageAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function addActivityLog(message) {
+  const logs = JSON.parse(localStorage.getItem('activityLog') || '[]');
+  logs.unshift({ message, date: new Date().toLocaleString() });
+  localStorage.setItem('activityLog', JSON.stringify(logs.slice(0, 50)));
+  renderActivityLog();
+}
+
+function renderActivityLog() {
+  if (!activityLogList) return;
+  const logs = JSON.parse(localStorage.getItem('activityLog') || '[]');
+  activityLogList.innerHTML = logs.length
+    ? logs.map(log => `<li><strong>${log.date}</strong><br>${log.message}</li>`).join('')
+    : '<li>Tidak ada aktivitas.</li>';
+}
+
+function setTheme(theme) {
+  document.body.classList.toggle('dark', theme === 'dark');
+  localStorage.setItem('theme', theme);
+  if (darkModeToggle) {
+    darkModeToggle.textContent = theme === 'dark' ? 'Mode Terang' : 'Mode Gelap';
+  }
+}
+
+function loadTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  setTheme(savedTheme);
+}
+
+function populateNotificationRecipientSelect() {
+  if (!notificationRecipientSelect) return;
+  const opts = students.map(s => `<option value="${s.id}">${s.name}${s.email ? ` (${s.email})` : ''}</option>`).join('');
+  notificationRecipientSelect.innerHTML = '<option value="">Pilih siswa</option>' + opts;
+}
+
+function exportBackup() {
+  const keys = ['students', 'teachers', 'subjects', 'homerooms', 'classes', 'majors', 'attendanceRecords', 'grades', 'schedules', 'payments', 'activityLog', 'theme'];
+  const data = {};
+  keys.forEach(key => {
+    const value = localStorage.getItem(key);
+    if (value !== null) {
+      try {
+        data[key] = JSON.parse(value);
+      } catch (error) {
+        data[key] = value;
+      }
+    }
+  });
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `backup-sekolah-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  addActivityLog('Backup data berhasil dibuat.');
+}
+
+function restoreBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      Object.keys(payload).forEach((key) => {
+        localStorage.setItem(key, JSON.stringify(payload[key]));
+      });
+      alert('Restore berhasil. Halaman akan dimuat ulang.');
+      location.reload();
+    } catch (err) {
+      alert('Gagal membaca file backup. Pastikan file JSON valid.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function sendNotification() {
+  const type = notificationTypeSelect?.value;
+  const recipientId = Number(notificationRecipientSelect?.value);
+  const message = notificationMessageInput?.value.trim();
+  if (!type || !recipientId || !message) {
+    alert('Pilih penerima, jenis notifikasi, dan isi pesan.');
+    return;
+  }
+  const student = students.find((s) => s.id === recipientId);
+  if (!student) {
+    alert('Siswa tidak ditemukan.');
+    return;
+  }
+  const text = `${message}\n\nSalam, SMA Negeri.`;
+  if (type === 'email') {
+    const email = student.email || '';
+    if (!email) {
+      alert('Email siswa belum tersedia.');
+      return;
+    }
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Notifikasi Sekolah')}&body=${encodeURIComponent(text)}`;
+    addActivityLog(`Notifikasi email dikirim ke ${student.name} (${email}).`);
+  } else {
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(`Kepada ${student.name}: ${text}`)}`;
+    window.open(waUrl, '_blank');
+    addActivityLog(`Notifikasi WhatsApp dibuka untuk ${student.name}.`);
+  }
+}
+
+function clearActivityLog() {
+  localStorage.removeItem('activityLog');
+  renderActivityLog();
 }
 
 function getStudentById(id) {
@@ -207,7 +358,8 @@ function exportStudentsToExcel() {
     Nama: student.name,
     Kelas: student.class,
     Jurusan: student.major,
-    Status: student.status
+    Status: student.status,
+    Email: student.email || ''
   }));
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
@@ -223,14 +375,15 @@ function exportStudentsToPdf() {
     student.name,
     student.class,
     student.major,
-    student.status
+    student.status,
+    student.email || ''
   ]);
 
   doc.setFontSize(14);
   doc.text('Data Siswa', 14, 18);
   doc.autoTable({
     startY: 24,
-    head: [['No.', 'Nama', 'Kelas', 'Jurusan', 'Status']],
+    head: [['No.', 'Nama', 'Kelas', 'Jurusan', 'Status', 'Email']],
     body: rows,
     theme: 'grid',
     headStyles: { fillColor: '#2c63ff' },
@@ -257,7 +410,9 @@ if (studentForm) {
       name: studentNameInput.value.trim(),
       class: studentClassSelect.value,
       major: studentMajorInput.value.trim(),
-      status: studentStatusSelect.value
+      status: studentStatusSelect.value,
+      email: studentEmailInput.value.trim(),
+      photo: studentPhotoPreview && !studentPhotoPreview.classList.contains('hidden') ? studentPhotoPreview.src : ''
     };
 
     if (!studentData.name || !studentData.class || !studentData.major || !studentData.status) {
@@ -348,7 +503,60 @@ if (exportStudentPdfButton) {
   exportStudentPdfButton.addEventListener('click', exportStudentsToPdf);
 }
 
+if (studentPhotoInput) {
+  studentPhotoInput.addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      studentPhotoPreview.src = '';
+      studentPhotoPreview.classList.add('hidden');
+      return;
+    }
+    try {
+      const dataUrl = await readImageAsDataURL(file);
+      studentPhotoPreview.src = dataUrl;
+      studentPhotoPreview.classList.remove('hidden');
+    } catch (err) {
+      console.error(err);
+    }
+  });
+}
+
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('click', () => {
+    const nextTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
+    setTheme(nextTheme);
+  });
+}
+
+if (exportBackupButton) {
+  exportBackupButton.addEventListener('click', exportBackup);
+}
+
+if (restoreBackupButton && backupImportInput) {
+  restoreBackupButton.addEventListener('click', () => backupImportInput.click());
+  backupImportInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) restoreBackup(file);
+    event.target.value = '';
+  });
+}
+
+if (sendNotificationButton) {
+  sendNotificationButton.addEventListener('click', sendNotification);
+}
+
+if (clearLogsButton) {
+  clearLogsButton.addEventListener('click', () => {
+    if (confirm('Bersihkan semua log aktivitas?')) {
+      clearActivityLog();
+    }
+  });
+}
+
 renderStudents();
+loadTheme();
+renderActivityLog();
+populateNotificationRecipientSelect();
 
 /* --- Kelola Kelas, Jurusan, dan Penempatan Siswa --- */
 const classMajorSection = document.querySelector('#classMajorManager');
@@ -1220,7 +1428,7 @@ if (teacherSection) {
   const roleSelect = document.querySelector('#roleSelect');
   const roleNotice = document.querySelector('#roleNotice');
   const roleAccessRules = {
-    Admin: ['gradesManager','attendanceManager','scheduleManager','financeManager'],
+    Admin: ['gradesManager','attendanceManager','scheduleManager','financeManager','systemManager'],
     Guru: ['gradesManager','attendanceManager','scheduleManager'],
     Siswa: ['gradesManager','attendanceManager'],
     'Orang Tua': ['gradesManager','attendanceManager']

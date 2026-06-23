@@ -736,494 +736,509 @@ if (teacherSection) {
         saveAll();
         renderTeachers();
       }
-
-        /* --- Absensi: input harian, rekap per kelas, laporan bulanan --- */
-        const attendanceSection = document.querySelector('#attendanceManager');
-        if (attendanceSection) {
-          const attendanceDate = document.querySelector('#attendanceDate');
-          const attendanceClass = document.querySelector('#attendanceClass');
-          const loadAttendance = document.querySelector('#loadAttendance');
-          const attendanceTableBody = document.querySelector('#attendanceTable tbody');
-          const saveAttendance = document.querySelector('#saveAttendance');
-          const recapDate = document.querySelector('#recapDate');
-          const showRecap = document.querySelector('#showRecap');
-          const reportMonth = document.querySelector('#reportMonth');
-          const reportClass = document.querySelector('#reportClass');
-          const exportCsv = document.querySelector('#exportCsv');
-          const exportPdf = document.querySelector('#exportPdf');
-
-          function loadAttendanceRecords() {
-            return JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-          }
-          function saveAttendanceRecords(records) {
-            localStorage.setItem('attendanceRecords', JSON.stringify(records));
-          }
-
-          // load classes & populate selects
-          const storedClasses = JSON.parse(localStorage.getItem('classes') || 'null') || ['X','XI','XII'];
-          function populateClassSelects() {
-            const opts = ['<option value="">Pilih kelas</option>'].concat(storedClasses.map(c => `<option value="${c}">${c}</option>`)).join('');
-            attendanceClass.innerHTML = opts;
-            reportClass.innerHTML = '<option value="">Semua Kelas</option>' + storedClasses.map(c => `<option value="${c}">${c}</option>`).join('');
-          }
-
-          function renderAttendanceTable(dateStr, cls) {
-            if (!dateStr || !cls) {
-              attendanceTableBody.innerHTML = '<tr><td colspan="4">Pilih tanggal dan kelas lalu klik Muat Siswa.</td></tr>';
-              return;
-            }
-            const studentsInClass = students.filter(s => s.class === cls);
-            const records = loadAttendanceRecords();
-            const rows = studentsInClass.map((s, idx) => {
-              const rec = records.find(r => r.date === dateStr && r.class === cls && r.studentId === s.id);
-              const checked = rec && rec.status === 'Hadir' ? 'checked' : '';
-              return `
-                <tr>
-                  <td>${idx + 1}</td>
-                  <td>${s.name}</td>
-                  <td>${s.class || ''}</td>
-                  <td><input type="checkbox" data-id="${s.id}" class="attendance-checkbox" ${checked} /></td>
-                </tr>
-              `;
-            }).join('');
-            attendanceTableBody.innerHTML = rows || '<tr><td colspan="4">Tidak ada siswa di kelas ini.</td></tr>';
-          }
-
-          function saveDailyAttendance(dateStr, cls) {
-            if (!dateStr || !cls) { alert('Pilih tanggal dan kelas.'); return; }
-            const checkboxes = Array.from(document.querySelectorAll('.attendance-checkbox'));
-            const records = loadAttendanceRecords().filter(r => !(r.date === dateStr && r.class === cls));
-            const newRecs = checkboxes.map(cb => ({ date: dateStr, class: cls, studentId: Number(cb.dataset.id), status: cb.checked ? 'Hadir' : 'Alpha' }));
-            const all = records.concat(newRecs);
-            saveAttendanceRecords(all);
-            alert('Absensi tersimpan.');
-          }
-
-          function showRecapForDate(dateStr) {
-            if (!dateStr) { alert('Pilih tanggal rekap.'); return; }
-            const records = loadAttendanceRecords().filter(r => r.date === dateStr);
-            const byClass = {};
-            records.forEach(r => { if (!byClass[r.class]) byClass[r.class] = { hadir:0, alpha:0 }; if (r.status === 'Hadir') byClass[r.class].hadir++; else byClass[r.class].alpha++; });
-            const rows = Object.keys(byClass).map(cls => `<tr><td>${cls}</td><td>${byClass[cls].hadir}</td><td>${byClass[cls].alpha}</td></tr>`).join('');
-            const tableHtml = `
-              <table class="student-table" style="margin-top:1rem;">
-                <thead><tr><th>Kelas</th><th>Hadir</th><th>Alpha</th></tr></thead>
-                <tbody>${rows || '<tr><td colspan="3">Tidak ada data.</td></tr>'}</tbody>
-              </table>`;
-            // show below attendance table
-            attendanceTableBody.insertAdjacentHTML('afterend', tableHtml);
-          }
-
-          function generateMonthlyCsv(monthStr, cls) {
-            if (!monthStr) { alert('Pilih bulan.'); return; }
-            const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
-            const studentsMap = {};
-            students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
-            records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
-            const lines = [['Nama','Student ID','Hadir','Alpha']];
-            Object.keys(studentsMap).forEach(id => { const s = studentsMap[id]; lines.push([s.name, id, s.hadir, s.alpha]); });
-            const csv = lines.map(l => l.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }
-
-          function exportMonthlyPdf(monthStr, cls) {
-            if (!monthStr) { alert('Pilih bulan.'); return; }
-            const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
-            const studentsMap = {};
-            students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
-            records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
-            const rows = Object.keys(studentsMap).map(id => [studentsMap[id].name, id, studentsMap[id].hadir, studentsMap[id].alpha]);
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text(`Laporan Absensi Bulanan ${monthStr}${cls ? ' - '+cls : ''}`, 14, 18);
-            doc.autoTable({ startY: 24, head: [['Nama','ID','Hadir','Alpha']], body: rows, theme:'grid' });
-            doc.save(`laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.pdf`);
-          }
-
-          loadAttendance.addEventListener('click', () => renderAttendanceTable(attendanceDate.value, attendanceClass.value));
-          saveAttendance.addEventListener('click', () => saveDailyAttendance(attendanceDate.value, attendanceClass.value));
-          showRecap.addEventListener('click', () => { document.querySelectorAll('table.student-table + table.student-table').forEach(n => n.remove()); showRecapForDate(recapDate.value); });
-          exportCsv.addEventListener('click', () => generateMonthlyCsv(reportMonth.value, reportClass.value));
-          exportPdf.addEventListener('click', () => exportMonthlyPdf(reportMonth.value, reportClass.value));
-
-          populateClassSelects();
-        }
-
-        /* --- Nilai & Raport --- */
-        const gradesSection = document.querySelector('#gradesManager');
-        if (gradesSection) {
-          const gradeStudentSelect = document.querySelector('#gradeStudent');
-          const gradeSubjectSelect = document.querySelector('#gradeSubject');
-          const gradeTugasInput = document.querySelector('#gradeTugas');
-          const gradeUTSInput = document.querySelector('#gradeUTS');
-          const gradeUASInput = document.querySelector('#gradeUAS');
-          const saveGradeBtn = document.querySelector('#saveGrade');
-          const gradesTableBody = document.querySelector('#gradesTable tbody');
-          const gradeSearch = document.querySelector('#gradeSearch');
-
-          let grades = JSON.parse(localStorage.getItem('grades') || '[]');
-          let editingGradeId = null;
-
-          function computeFinal(tugas, uts, uas) {
-            const t = Number(tugas) || 0;
-            const u = Number(uts) || 0;
-            const a = Number(uas) || 0;
-            return Number((t * 0.3 + u * 0.3 + a * 0.4).toFixed(2));
-          }
-
-          function saveGrades() {
-            localStorage.setItem('grades', JSON.stringify(grades));
-          }
-
-          function populateGradeStudentSelect() {
-            gradeStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name} — ${s.class || '-'} / ${s.major || '-'}</option>`).join('');
-          }
-
-          function populateGradeSubjectSelect() {
-            const subjList = JSON.parse(localStorage.getItem('subjects') || 'null') || [];
-            gradeSubjectSelect.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjList.map(s => `<option value="${s}">${s}</option>`).join('');
-          }
-
-          function renderGrades() {
-            const q = gradeSearch.value.trim().toLowerCase();
-            const rows = grades
-              .filter(g => {
-                const st = students.find(s => s.id === g.studentId);
-                return !q || (st && st.name.toLowerCase().includes(q)) || (g.subject && g.subject.toLowerCase().includes(q));
-              })
-              .map((g, idx) => {
-                const st = students.find(s => s.id === g.studentId) || { name: '—' };
-                return `
-                  <tr>
-                    <td>${idx + 1}</td>
-                    <td>${st.name}</td>
-                    <td>${g.subject}</td>
-                    <td>${g.tugas}</td>
-                    <td>${g.uts}</td>
-                    <td>${g.uas}</td>
-                    <td>${g.final}</td>
-                    <td>
-                      <button class="btn btn-secondary edit-grade" data-id="${g.id}">Edit</button>
-                      <button class="btn btn-secondary delete-grade" data-id="${g.id}">Hapus</button>
-                      <button class="btn btn-secondary print-grade" data-id="${g.id}">Cetak Raport</button>
-                    </td>
-                  </tr>
-                `;
-              }).join('');
-            gradesTableBody.innerHTML = rows || '<tr><td colspan="8">Belum ada nilai.</td></tr>';
-          }
-
-          function resetGradeForm() {
-            editingGradeId = null;
-            gradeStudentSelect.value = '';
-            gradeSubjectSelect.value = '';
-            gradeTugasInput.value = '';
-            gradeUTSInput.value = '';
-            gradeUASInput.value = '';
-          }
-
-          saveGradeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const studentId = Number(gradeStudentSelect.value);
-            const subject = gradeSubjectSelect.value.trim();
-            const tugas = Number(gradeTugasInput.value);
-            const uts = Number(gradeUTSInput.value);
-            const uas = Number(gradeUASInput.value);
-            if (!studentId || !subject) { alert('Pilih siswa dan mata pelajaran.'); return; }
-            const final = computeFinal(tugas, uts, uas);
-            if (editingGradeId) {
-              const g = grades.find(x => x.id === editingGradeId);
-              if (g) { g.studentId = studentId; g.subject = subject; g.tugas = tugas; g.uts = uts; g.uas = uas; g.final = final; }
-              alert('Nilai diperbarui.');
-            } else {
-              const id = grades.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
-              grades.push({ id, studentId, subject, tugas, uts, uas, final });
-              alert('Nilai disimpan.');
-            }
-            saveGrades();
-            renderGrades();
-            resetGradeForm();
-          });
-
-          gradesTableBody.addEventListener('click', (e) => {
-            const editBtn = e.target.closest('.edit-grade');
-            const delBtn = e.target.closest('.delete-grade');
-            const printBtn = e.target.closest('.print-grade');
-            if (editBtn) {
-              const id = Number(editBtn.dataset.id);
-              const g = grades.find(x => x.id === id);
-              if (!g) return;
-              editingGradeId = id;
-              gradeStudentSelect.value = g.studentId;
-              gradeSubjectSelect.value = g.subject;
-              gradeTugasInput.value = g.tugas;
-              gradeUTSInput.value = g.uts;
-              gradeUASInput.value = g.uas;
-            }
-            if (delBtn) {
-              const id = Number(delBtn.dataset.id);
-              if (confirm('Hapus nilai?')) {
-                grades = grades.filter(x => x.id !== id);
-                saveGrades();
-                renderGrades();
-              }
-
-                /* --- Jadwal Pelajaran (CRUD) --- */
-                const scheduleSection = document.querySelector('#scheduleManager');
-                if (scheduleSection) {
-                  const scheduleClass = document.querySelector('#scheduleClass');
-                  const scheduleTeacher = document.querySelector('#scheduleTeacher');
-                  const scheduleSubject = document.querySelector('#scheduleSubject');
-                  const scheduleDay = document.querySelector('#scheduleDay');
-                  const scheduleStart = document.querySelector('#scheduleStart');
-                  const scheduleEnd = document.querySelector('#scheduleEnd');
-                  const addScheduleBtn = document.querySelector('#addSchedule');
-                  const schedulesTableBody = document.querySelector('#schedulesTable tbody');
-                  const viewScheduleClass = document.querySelector('#viewScheduleClass');
-
-                  function loadSchedules() { return JSON.parse(localStorage.getItem('schedules') || '[]'); }
-                  function saveSchedules(list) { localStorage.setItem('schedules', JSON.stringify(list)); }
-
-                  function loadTeachersLocal() { return JSON.parse(localStorage.getItem('teachers') || '[]'); }
-                  function loadSubjectsLocal() { return JSON.parse(localStorage.getItem('subjects') || '[]'); }
-                  function loadClassesLocal() { return JSON.parse(localStorage.getItem('classes') || '[]'); }
-
-                  function populateScheduleSelects() {
-                    const classes = loadClassesLocal();
-                    const teachers = loadTeachersLocal();
-                    const subjects = loadSubjectsLocal();
-                    scheduleClass.innerHTML = '<option value="">Pilih kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-                    viewScheduleClass.innerHTML = '<option value="">Semua Kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-                    scheduleTeacher.innerHTML = '<option value="">Pilih guru</option>' + teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
-                    scheduleSubject.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
-                  }
-
-                  function renderSchedules(filterClass='') {
-                    const schedules = loadSchedules();
-                    const teachers = loadTeachersLocal();
-                    const rows = schedules
-                      .filter(s => !filterClass || s.class === filterClass)
-                      .map((s, idx) => {
-                        const t = teachers.find(x=>x.id === Number(s.teacherId));
-                        return `
-                          <tr>
-                            <td>${idx+1}</td>
-                            <td>${s.class}</td>
-                            <td>${s.day}</td>
-                            <td>${s.start} - ${s.end}</td>
-                            <td>${s.subject}</td>
-                            <td>${t ? t.name : '-'}</td>
-                            <td>
-                              <button class="btn btn-secondary delete-schedule" data-id="${s.id}">Hapus</button>
-                            </td>
-                          </tr>
-                        `;
-                      }).join('');
-                    schedulesTableBody.innerHTML = rows || '<tr><td colspan="7">Belum ada jadwal.</td></tr>';
-                  }
-
-                  addScheduleBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const cls = scheduleClass.value;
-                    const teacherId = scheduleTeacher.value;
-                    const subj = scheduleSubject.value;
-                    const day = scheduleDay.value;
-                    const start = scheduleStart.value;
-                    const end = scheduleEnd.value;
-                    if (!cls || !teacherId || !subj || !day || !start || !end) { alert('Lengkapi data jadwal.'); return; }
-                    const schedules = loadSchedules();
-                    const id = schedules.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
-                    schedules.push({ id, class: cls, teacherId, subject: subj, day, start, end });
-                    saveSchedules(schedules);
-                    renderSchedules(viewScheduleClass.value);
-                    alert('Jadwal ditambahkan.');
-                  });
-
-                  schedulesTableBody.addEventListener('click', (e) => {
-                    const del = e.target.closest('.delete-schedule');
-                    if (!del) return;
-                    const id = Number(del.dataset.id);
-                    if (confirm('Hapus jadwal?')) {
-                      let list = loadSchedules();
-                      list = list.filter(s => s.id !== id);
-                      saveSchedules(list);
-                      renderSchedules(viewScheduleClass.value);
-                    }
-                  });
-
-                  viewScheduleClass.addEventListener('change', () => renderSchedules(viewScheduleClass.value));
-
-                  populateScheduleSelects();
-                  renderSchedules();
-                }
-
-                /* --- Keuangan Sekolah: SPP dan Pembayaran --- */
-                const financeSection = document.querySelector('#financeManager');
-                if (financeSection) {
-                  const sppAmountInput = document.querySelector('#sppAmount');
-                  const payStudentSelect = document.querySelector('#payStudent');
-                  const payMonthInput = document.querySelector('#payMonth');
-                  const payAmountInput = document.querySelector('#payAmount');
-                  const addPaymentBtn = document.querySelector('#addPayment');
-                  const paymentsTableBody = document.querySelector('#paymentsTable tbody');
-                  const filterStudentSelect = document.querySelector('#filterStudent');
-                  const computeOutstandingBtn = document.querySelector('#computeOutstanding');
-                  const outstandingSummary = document.querySelector('#outstandingSummary');
-
-                  let payments = JSON.parse(localStorage.getItem('payments') || '[]');
-
-                  function savePayments() { localStorage.setItem('payments', JSON.stringify(payments)); }
-
-                  function populateFinanceStudentSelects() {
-                    payStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-                    filterStudentSelect.innerHTML = '<option value="">Semua</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-                  }
-
-                  function renderPayments(filterStudentId='') {
-                    const rows = payments
-                      .filter(p => !filterStudentId || String(p.studentId) === String(filterStudentId))
-                      .map((p, idx) => {
-                        const s = students.find(st => st.id === p.studentId) || { name: '-' };
-                        return `
-                          <tr>
-                            <td>${idx+1}</td>
-                            <td>${s.name}</td>
-                            <td>${p.month}</td>
-                            <td>${p.amount}</td>
-                            <td>${p.date}</td>
-                            <td>
-                              <button class="btn btn-secondary print-payment" data-id="${p.id}">Bukti</button>
-                              <button class="btn btn-secondary delete-payment" data-id="${p.id}">Hapus</button>
-                            </td>
-                          </tr>
-                        `;
-                      }).join('');
-                    paymentsTableBody.innerHTML = rows || '<tr><td colspan="6">Belum ada pembayaran.</td></tr>';
-                  }
-
-                  function addPayment() {
-                    const studentId = Number(payStudentSelect.value);
-                    const month = payMonthInput.value;
-                    const amount = Number(payAmountInput.value) || 0;
-                    if (!studentId || !month || amount <= 0) { alert('Lengkapi data pembayaran.'); return; }
-                    const id = payments.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
-                    const date = new Date().toLocaleDateString();
-                    payments.push({ id, studentId, month, amount, date });
-                    savePayments();
-                    renderPayments(filterStudentSelect.value);
-                    payMonthInput.value = '';
-                    payAmountInput.value = '';
-                    alert('Pembayaran tercatat.');
-                  }
-
-                  function computeOutstanding(studentId) {
-                    const sppPerMonth = Number(sppAmountInput.value) || 0;
-                    if (!sppPerMonth) { outstandingSummary.innerHTML = '<p style="color:#c00;">Tentukan SPP per bulan terlebih dahulu.</p>'; return; }
-                    const paidRecords = payments.filter(p => p.studentId === studentId);
-                    // For simplicity, assume year months from Jan to Dec of current year
-                    const months = Array.from({length:12}, (_,i)=>{
-                      const d = new Date(); d.setMonth(i); return `${d.getFullYear()}-${String(i+1).padStart(2,'0')}`;
-                    });
-                    const unpaid = months.filter(m => !paidRecords.find(p => p.month === m));
-                    const totalDue = sppPerMonth * months.length;
-                    const totalPaid = paidRecords.reduce((s,p)=>s+p.amount,0);
-                    const balance = totalDue - totalPaid;
-                    outstandingSummary.innerHTML = `
-                      <p><strong>Total SPP (tahun):</strong> ${totalDue}</p>
-                      <p><strong>Total Dibayar:</strong> ${totalPaid}</p>
-                      <p><strong>Sisa / Tunggakan:</strong> ${balance}</p>
-                      <p><strong>Bulan belum bayar:</strong> ${unpaid.join(', ')}</p>
-                    `;
-                  }
-
-                  function printPaymentReceipt(paymentId) {
-                    const p = payments.find(x=>x.id===paymentId);
-                    if (!p) return;
-                    const student = students.find(s=>s.id===p.studentId) || { name: '-' };
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    doc.setFontSize(14);
-                    doc.text('Bukti Pembayaran SPP', 14, 18);
-                    doc.setFontSize(12);
-                    doc.text(`Nama: ${student.name}`, 14, 28);
-                    doc.text(`Bulan: ${p.month}`, 14, 36);
-                    doc.text(`Jumlah: ${p.amount}`, 14, 44);
-                    doc.text(`Tanggal: ${p.date}`, 14, 52);
-                    doc.save(`bukti-pembayaran-${student.name.replace(/\s+/g,'-')}-${p.id}.pdf`);
-                  }
-
-                  paymentsTableBody.addEventListener('click', (e) => {
-                    const printBtn = e.target.closest('.print-payment');
-                    const delBtn = e.target.closest('.delete-payment');
-                    if (printBtn) {
-                      const id = Number(printBtn.dataset.id);
-                      printPaymentReceipt(id);
-                    }
-                    if (delBtn) {
-                      const id = Number(delBtn.dataset.id);
-                      if (confirm('Hapus pembayaran?')) {
-                        payments = payments.filter(p=>p.id!==id);
-                        savePayments();
-                        renderPayments(filterStudentSelect.value);
-                      }
-                    }
-                  });
-
-                  addPaymentBtn.addEventListener('click', (e) => { e.preventDefault(); addPayment(); });
-                  filterStudentSelect.addEventListener('change', () => renderPayments(filterStudentSelect.value));
-                  computeOutstandingBtn.addEventListener('click', () => {
-                    const sid = Number(filterStudentSelect.value);
-                    if (!sid) { alert('Pilih siswa pada filter untuk menghitung tunggakan.'); return; }
-                    computeOutstanding(sid);
-                  });
-
-                  populateFinanceStudentSelects();
-                  renderPayments();
-                }
-            }
-            if (printBtn) {
-              const id = Number(printBtn.dataset.id);
-              const g = grades.find(x => x.id === id);
-              if (g) printRaportForStudent(g.studentId);
-            }
-          });
-
-          gradeSearch.addEventListener('input', renderGrades);
-
-          function printRaportForStudent(studentId) {
-            const student = students.find(s => s.id === studentId);
-            if (!student) { alert('Siswa tidak ditemukan.'); return; }
-            const studentGrades = grades.filter(g => g.studentId === studentId);
-            const rows = studentGrades.map(g => [g.subject, g.tugas, g.uts, g.uas, g.final]);
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFontSize(14);
-            doc.text('Raport Siswa', 14, 18);
-            doc.setFontSize(12);
-            doc.text(`Nama: ${student.name}`, 14, 28);
-            doc.text(`Kelas: ${student.class || '-'}`, 14, 36);
-            doc.autoTable({ startY: 44, head: [['Mata Pelajaran','Tugas','UTS','UAS','Nilai Akhir']], body: rows, theme:'grid' });
-            // average
-            if (rows.length) {
-              const avg = (studentGrades.reduce((s,x)=>s+x.final,0)/studentGrades.length).toFixed(2);
-              doc.text(`Rata-rata Nilai Akhir: ${avg}`, 14, doc.lastAutoTable.finalY + 10);
-            }
-            doc.save(`raport-${student.name.replace(/\s+/g,'-')}.pdf`);
-          }
-
-          populateGradeStudentSelect();
-          populateGradeSubjectSelect();
-          renderGrades();
-        }
     }
   });
 
+  /* --- Absensi: input harian, rekap per kelas, laporan bulanan --- */
+  const attendanceSection = document.querySelector('#attendanceManager');
+  if (attendanceSection) {
+    const attendanceDate = document.querySelector('#attendanceDate');
+    const attendanceClass = document.querySelector('#attendanceClass');
+    const loadAttendance = document.querySelector('#loadAttendance');
+    const attendanceTableBody = document.querySelector('#attendanceTable tbody');
+    const saveAttendance = document.querySelector('#saveAttendance');
+    const recapDate = document.querySelector('#recapDate');
+    const showRecap = document.querySelector('#showRecap');
+    const reportMonth = document.querySelector('#reportMonth');
+    const reportClass = document.querySelector('#reportClass');
+    const exportCsv = document.querySelector('#exportCsv');
+    const exportPdf = document.querySelector('#exportPdf');
+
+    function loadAttendanceRecords() {
+      return JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+    }
+    function saveAttendanceRecords(records) {
+      localStorage.setItem('attendanceRecords', JSON.stringify(records));
+    }
+
+    const storedClasses = JSON.parse(localStorage.getItem('classes') || 'null') || ['X','XI','XII'];
+    function populateClassSelects() {
+      const opts = ['<option value="">Pilih kelas</option>'].concat(storedClasses.map(c => `<option value="${c}">${c}</option>`)).join('');
+      attendanceClass.innerHTML = opts;
+      reportClass.innerHTML = '<option value="">Semua Kelas</option>' + storedClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function renderAttendanceTable(dateStr, cls) {
+      if (!dateStr || !cls) {
+        attendanceTableBody.innerHTML = '<tr><td colspan="4">Pilih tanggal dan kelas lalu klik Muat Siswa.</td></tr>';
+        return;
+      }
+      const studentsInClass = students.filter(s => s.class === cls);
+      const records = loadAttendanceRecords();
+      const rows = studentsInClass.map((s, idx) => {
+        const rec = records.find(r => r.date === dateStr && r.class === cls && r.studentId === s.id);
+        const checked = rec && rec.status === 'Hadir' ? 'checked' : '';
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${s.name}</td>
+            <td>${s.class || ''}</td>
+            <td><input type="checkbox" data-id="${s.id}" class="attendance-checkbox" ${checked} /></td>
+          </tr>
+        `;
+      }).join('');
+      attendanceTableBody.innerHTML = rows || '<tr><td colspan="4">Tidak ada siswa di kelas ini.</td></tr>';
+    }
+
+    function saveDailyAttendance(dateStr, cls) {
+      if (!dateStr || !cls) { alert('Pilih tanggal dan kelas.'); return; }
+      const checkboxes = Array.from(document.querySelectorAll('.attendance-checkbox'));
+      const records = loadAttendanceRecords().filter(r => !(r.date === dateStr && r.class === cls));
+      const newRecs = checkboxes.map(cb => ({ date: dateStr, class: cls, studentId: Number(cb.dataset.id), status: cb.checked ? 'Hadir' : 'Alpha' }));
+      const all = records.concat(newRecs);
+      saveAttendanceRecords(all);
+      alert('Absensi tersimpan.');
+    }
+
+    function showRecapForDate(dateStr) {
+      if (!dateStr) { alert('Pilih tanggal rekap.'); return; }
+      const records = loadAttendanceRecords().filter(r => r.date === dateStr);
+      const byClass = {};
+      records.forEach(r => { if (!byClass[r.class]) byClass[r.class] = { hadir:0, alpha:0 }; if (r.status === 'Hadir') byClass[r.class].hadir++; else byClass[r.class].alpha++; });
+      const rows = Object.keys(byClass).map(cls => `<tr><td>${cls}</td><td>${byClass[cls].hadir}</td><td>${byClass[cls].alpha}</td></tr>`).join('');
+      const tableHtml = `
+        <table class="student-table" style="margin-top:1rem;">
+          <thead><tr><th>Kelas</th><th>Hadir</th><th>Alpha</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="3">Tidak ada data.</td></tr>'}</tbody>
+        </table>`;
+      attendanceTableBody.insertAdjacentHTML('afterend', tableHtml);
+    }
+
+    function generateMonthlyCsv(monthStr, cls) {
+      if (!monthStr) { alert('Pilih bulan.'); return; }
+      const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
+      const studentsMap = {};
+      students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
+      records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
+      const lines = [['Nama','Student ID','Hadir','Alpha']];
+      Object.keys(studentsMap).forEach(id => { const s = studentsMap[id]; lines.push([s.name, id, s.hadir, s.alpha]); });
+      const csv = lines.map(l => l.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportMonthlyPdf(monthStr, cls) {
+      if (!monthStr) { alert('Pilih bulan.'); return; }
+      const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
+      const studentsMap = {};
+      students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
+      records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
+      const rows = Object.keys(studentsMap).map(id => [studentsMap[id].name, id, studentsMap[id].hadir, studentsMap[id].alpha]);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text(`Laporan Absensi Bulanan ${monthStr}${cls ? ' - '+cls : ''}`, 14, 18);
+      doc.autoTable({ startY: 24, head: [['Nama','ID','Hadir','Alpha']], body: rows, theme:'grid' });
+      doc.save(`laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.pdf`);
+    }
+
+    loadAttendance.addEventListener('click', () => renderAttendanceTable(attendanceDate.value, attendanceClass.value));
+    saveAttendance.addEventListener('click', () => saveDailyAttendance(attendanceDate.value, attendanceClass.value));
+    showRecap.addEventListener('click', () => { document.querySelectorAll('table.student-table + table.student-table').forEach(n => n.remove()); showRecapForDate(recapDate.value); });
+    exportCsv.addEventListener('click', () => generateMonthlyCsv(reportMonth.value, reportClass.value));
+    exportPdf.addEventListener('click', () => exportMonthlyPdf(reportMonth.value, reportClass.value));
+
+    populateClassSelects();
+  }
+
+  /* --- Nilai & Raport --- */
+  const gradesSection = document.querySelector('#gradesManager');
+  if (gradesSection) {
+    const gradeStudentSelect = document.querySelector('#gradeStudent');
+    const gradeSubjectSelect = document.querySelector('#gradeSubject');
+    const gradeTugasInput = document.querySelector('#gradeTugas');
+    const gradeUTSInput = document.querySelector('#gradeUTS');
+    const gradeUASInput = document.querySelector('#gradeUAS');
+    const saveGradeBtn = document.querySelector('#saveGrade');
+    const gradesTableBody = document.querySelector('#gradesTable tbody');
+    const gradeSearch = document.querySelector('#gradeSearch');
+
+    let grades = JSON.parse(localStorage.getItem('grades') || '[]');
+    let editingGradeId = null;
+
+    function computeFinal(tugas, uts, uas) {
+      const t = Number(tugas) || 0;
+      const u = Number(uts) || 0;
+      const a = Number(uas) || 0;
+      return Number((t * 0.3 + u * 0.3 + a * 0.4).toFixed(2));
+    }
+
+    function saveGrades() {
+      localStorage.setItem('grades', JSON.stringify(grades));
+    }
+
+    function populateGradeStudentSelect() {
+      gradeStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name} — ${s.class || '-'} / ${s.major || '-'}</option>`).join('');
+    }
+
+    function populateGradeSubjectSelect() {
+      const subjList = JSON.parse(localStorage.getItem('subjects') || 'null') || [];
+      gradeSubjectSelect.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjList.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    function renderGrades() {
+      const q = gradeSearch.value.trim().toLowerCase();
+      const rows = grades
+        .filter(g => {
+          const st = students.find(s => s.id === g.studentId);
+          return !q || (st && st.name.toLowerCase().includes(q)) || (g.subject && g.subject.toLowerCase().includes(q));
+        })
+        .map((g, idx) => {
+          const st = students.find(s => s.id === g.studentId) || { name: '—' };
+          return `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${st.name}</td>
+              <td>${g.subject}</td>
+              <td>${g.tugas}</td>
+              <td>${g.uts}</td>
+              <td>${g.uas}</td>
+              <td>${g.final}</td>
+              <td>
+                <button class="btn btn-secondary edit-grade" data-id="${g.id}">Edit</button>
+                <button class="btn btn-secondary delete-grade" data-id="${g.id}">Hapus</button>
+                <button class="btn btn-secondary print-grade" data-id="${g.id}">Cetak Raport</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      gradesTableBody.innerHTML = rows || '<tr><td colspan="8">Belum ada nilai.</td></tr>';
+    }
+
+    function resetGradeForm() {
+      editingGradeId = null;
+      gradeStudentSelect.value = '';
+      gradeSubjectSelect.value = '';
+      gradeTugasInput.value = '';
+      gradeUTSInput.value = '';
+      gradeUASInput.value = '';
+    }
+
+    saveGradeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const studentId = Number(gradeStudentSelect.value);
+      const subject = gradeSubjectSelect.value.trim();
+      const tugas = Number(gradeTugasInput.value);
+      const uts = Number(gradeUTSInput.value);
+      const uas = Number(gradeUASInput.value);
+      if (!studentId || !subject) { alert('Pilih siswa dan mata pelajaran.'); return; }
+      const final = computeFinal(tugas, uts, uas);
+      if (editingGradeId) {
+        const g = grades.find(x => x.id === editingGradeId);
+        if (g) { g.studentId = studentId; g.subject = subject; g.tugas = tugas; g.uts = uts; g.uas = uas; g.final = final; }
+        alert('Nilai diperbarui.');
+      } else {
+        const id = grades.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
+        grades.push({ id, studentId, subject, tugas, uts, uas, final });
+        alert('Nilai disimpan.');
+      }
+      saveGrades();
+      renderGrades();
+      resetGradeForm();
+    });
+
+    gradesTableBody.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.edit-grade');
+      const delBtn = e.target.closest('.delete-grade');
+      const printBtn = e.target.closest('.print-grade');
+      if (editBtn) {
+        const id = Number(editBtn.dataset.id);
+        const g = grades.find(x => x.id === id);
+        if (!g) return;
+        editingGradeId = id;
+        gradeStudentSelect.value = g.studentId;
+        gradeSubjectSelect.value = g.subject;
+        gradeTugasInput.value = g.tugas;
+        gradeUTSInput.value = g.uts;
+        gradeUASInput.value = g.uas;
+      }
+      if (delBtn) {
+        const id = Number(delBtn.dataset.id);
+        if (confirm('Hapus nilai?')) {
+          grades = grades.filter(x => x.id !== id);
+          saveGrades();
+          renderGrades();
+        }
+      }
+      if (printBtn) {
+        const id = Number(printBtn.dataset.id);
+        const g = grades.find(x => x.id === id);
+        if (g) printRaportForStudent(g.studentId);
+      }
+    });
+
+    gradeSearch.addEventListener('input', renderGrades);
+
+    function printRaportForStudent(studentId) {
+      const student = students.find(s => s.id === studentId);
+      if (!student) { alert('Siswa tidak ditemukan.'); return; }
+      const studentGrades = grades.filter(g => g.studentId === studentId);
+      const rows = studentGrades.map(g => [g.subject, g.tugas, g.uts, g.uas, g.final]);
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text('Raport Siswa', 14, 18);
+      doc.setFontSize(12);
+      doc.text(`Nama: ${student.name}`, 14, 28);
+      doc.text(`Kelas: ${student.class || '-'}`, 14, 36);
+      doc.autoTable({ startY: 44, head: [['Mata Pelajaran','Tugas','UTS','UAS','Nilai Akhir']], body: rows, theme:'grid' });
+      if (rows.length) {
+        const avg = (studentGrades.reduce((s,x)=>s+x.final,0)/studentGrades.length).toFixed(2);
+        doc.text(`Rata-rata Nilai Akhir: ${avg}`, 14, doc.lastAutoTable.finalY + 10);
+      }
+      doc.save(`raport-${student.name.replace(/\s+/g,'-')}.pdf`);
+    }
+
+    populateGradeStudentSelect();
+    populateGradeSubjectSelect();
+    renderGrades();
+  }
+
+  /* --- Jadwal Pelajaran (CRUD) --- */
+  const scheduleSection = document.querySelector('#scheduleManager');
+  if (scheduleSection) {
+    const scheduleClass = document.querySelector('#scheduleClass');
+    const scheduleTeacher = document.querySelector('#scheduleTeacher');
+    const scheduleSubject = document.querySelector('#scheduleSubject');
+    const scheduleDay = document.querySelector('#scheduleDay');
+    const scheduleStart = document.querySelector('#scheduleStart');
+    const scheduleEnd = document.querySelector('#scheduleEnd');
+    const addScheduleBtn = document.querySelector('#addSchedule');
+    const schedulesTableBody = document.querySelector('#schedulesTable tbody');
+    const viewScheduleClass = document.querySelector('#viewScheduleClass');
+
+    function loadSchedules() { return JSON.parse(localStorage.getItem('schedules') || '[]'); }
+    function saveSchedules(list) { localStorage.setItem('schedules', JSON.stringify(list)); }
+    function loadTeachersLocal() { return JSON.parse(localStorage.getItem('teachers') || '[]'); }
+    function loadSubjectsLocal() { return JSON.parse(localStorage.getItem('subjects') || '[]'); }
+    function loadClassesLocal() { return JSON.parse(localStorage.getItem('classes') || '[]'); }
+
+    function populateScheduleSelects() {
+      const classes = loadClassesLocal();
+      const teachers = loadTeachersLocal();
+      const subjects = loadSubjectsLocal();
+      scheduleClass.innerHTML = '<option value="">Pilih kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+      viewScheduleClass.innerHTML = '<option value="">Semua Kelas</option>' + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+      scheduleTeacher.innerHTML = '<option value="">Pilih guru</option>' + teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+      scheduleSubject.innerHTML = '<option value="">Pilih mata pelajaran</option>' + subjects.map(s=>`<option value="${s}">${s}</option>`).join('');
+    }
+
+    function renderSchedules(filterClass='') {
+      const schedules = loadSchedules();
+      const teachers = loadTeachersLocal();
+      const rows = schedules
+        .filter(s => !filterClass || s.class === filterClass)
+        .map((s, idx) => {
+          const t = teachers.find(x=>x.id === Number(s.teacherId));
+          return `
+            <tr>
+              <td>${idx+1}</td>
+              <td>${s.class}</td>
+              <td>${s.day}</td>
+              <td>${s.start} - ${s.end}</td>
+              <td>${s.subject}</td>
+              <td>${t ? t.name : '-'}</td>
+              <td>
+                <button class="btn btn-secondary delete-schedule" data-id="${s.id}">Hapus</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      schedulesTableBody.innerHTML = rows || '<tr><td colspan="7">Belum ada jadwal.</td></tr>';
+    }
+
+    addScheduleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const cls = scheduleClass.value;
+      const teacherId = scheduleTeacher.value;
+      const subj = scheduleSubject.value;
+      const day = scheduleDay.value;
+      const start = scheduleStart.value;
+      const end = scheduleEnd.value;
+      if (!cls || !teacherId || !subj || !day || !start || !end) { alert('Lengkapi data jadwal.'); return; }
+      const schedules = loadSchedules();
+      const id = schedules.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
+      schedules.push({ id, class: cls, teacherId, subject: subj, day, start, end });
+      saveSchedules(schedules);
+      renderSchedules(viewScheduleClass.value);
+      alert('Jadwal ditambahkan.');
+    });
+
+    schedulesTableBody.addEventListener('click', (e) => {
+      const del = e.target.closest('.delete-schedule');
+      if (!del) return;
+      const id = Number(del.dataset.id);
+      if (confirm('Hapus jadwal?')) {
+        let list = loadSchedules();
+        list = list.filter(s => s.id !== id);
+        saveSchedules(list);
+        renderSchedules(viewScheduleClass.value);
+      }
+    });
+
+    viewScheduleClass.addEventListener('change', () => renderSchedules(viewScheduleClass.value));
+
+    populateScheduleSelects();
+    renderSchedules();
+  }
+
+  /* --- Keuangan Sekolah: SPP dan Pembayaran --- */
+  const financeSection = document.querySelector('#financeManager');
+  if (financeSection) {
+    const sppAmountInput = document.querySelector('#sppAmount');
+    const payStudentSelect = document.querySelector('#payStudent');
+    const payMonthInput = document.querySelector('#payMonth');
+    const payAmountInput = document.querySelector('#payAmount');
+    const addPaymentBtn = document.querySelector('#addPayment');
+    const paymentsTableBody = document.querySelector('#paymentsTable tbody');
+    const filterStudentSelect = document.querySelector('#filterStudent');
+    const computeOutstandingBtn = document.querySelector('#computeOutstanding');
+    const outstandingSummary = document.querySelector('#outstandingSummary');
+
+    let payments = JSON.parse(localStorage.getItem('payments') || '[]');
+
+    function savePayments() { localStorage.setItem('payments', JSON.stringify(payments)); }
+
+    function populateFinanceStudentSelects() {
+      payStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+      filterStudentSelect.innerHTML = '<option value="">Semua</option>' + students.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    }
+
+    function renderPayments(filterStudentId='') {
+      const rows = payments
+        .filter(p => !filterStudentId || String(p.studentId) === String(filterStudentId))
+        .map((p, idx) => {
+          const s = students.find(st => st.id === p.studentId) || { name: '-' };
+          return `
+            <tr>
+              <td>${idx+1}</td>
+              <td>${s.name}</td>
+              <td>${p.month}</td>
+              <td>${p.amount}</td>
+              <td>${p.date}</td>
+              <td>
+                <button class="btn btn-secondary print-payment" data-id="${p.id}">Bukti</button>
+                <button class="btn btn-secondary delete-payment" data-id="${p.id}">Hapus</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      paymentsTableBody.innerHTML = rows || '<tr><td colspan="6">Belum ada pembayaran.</td></tr>';
+    }
+
+    function addPayment() {
+      const studentId = Number(payStudentSelect.value);
+      const month = payMonthInput.value;
+      const amount = Number(payAmountInput.value) || 0;
+      if (!studentId || !month || amount <= 0) { alert('Lengkapi data pembayaran.'); return; }
+      const id = payments.reduce((m,x)=>Math.max(m,x.id||0),0)+1;
+      const date = new Date().toLocaleDateString();
+      payments.push({ id, studentId, month, amount, date });
+      savePayments();
+      renderPayments(filterStudentSelect.value);
+      payMonthInput.value = '';
+      payAmountInput.value = '';
+      alert('Pembayaran tercatat.');
+    }
+
+    function computeOutstanding(studentId) {
+      const sppPerMonth = Number(sppAmountInput.value) || 0;
+      if (!sppPerMonth) { outstandingSummary.innerHTML = '<p style="color:#c00;">Tentukan SPP per bulan terlebih dahulu.</p>'; return; }
+      const paidRecords = payments.filter(p => p.studentId === studentId);
+      const months = Array.from({length:12}, (_,i)=>{ const d = new Date(); d.setMonth(i); return `${d.getFullYear()}-${String(i+1).padStart(2,'0')}`; });
+      const unpaid = months.filter(m => !paidRecords.find(p => p.month === m));
+      const totalDue = sppPerMonth * months.length;
+      const totalPaid = paidRecords.reduce((s,p)=>s+p.amount,0);
+      const balance = totalDue - totalPaid;
+      outstandingSummary.innerHTML = `
+        <p><strong>Total SPP (tahun):</strong> ${totalDue}</p>
+        <p><strong>Total Dibayar:</strong> ${totalPaid}</p>
+        <p><strong>Sisa / Tunggakan:</strong> ${balance}</p>
+        <p><strong>Bulan belum bayar:</strong> ${unpaid.join(', ')}</p>
+      `;
+    }
+
+    function printPaymentReceipt(paymentId) {
+      const p = payments.find(x=>x.id===paymentId);
+      if (!p) return;
+      const student = students.find(s=>s.id===p.studentId) || { name: '-' };
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text('Bukti Pembayaran SPP', 14, 18);
+      doc.setFontSize(12);
+      doc.text(`Nama: ${student.name}`, 14, 28);
+      doc.text(`Bulan: ${p.month}`, 14, 36);
+      doc.text(`Jumlah: ${p.amount}`, 14, 44);
+      doc.text(`Tanggal: ${p.date}`, 14, 52);
+      doc.save(`bukti-pembayaran-${student.name.replace(/\s+/g,'-')}-${p.id}.pdf`);
+    }
+
+    paymentsTableBody.addEventListener('click', (e) => {
+      const printBtn = e.target.closest('.print-payment');
+      const delBtn = e.target.closest('.delete-payment');
+      if (printBtn) {
+        const id = Number(printBtn.dataset.id);
+        printPaymentReceipt(id);
+      }
+      if (delBtn) {
+        const id = Number(delBtn.dataset.id);
+        if (confirm('Hapus pembayaran?')) {
+          payments = payments.filter(p=>p.id!==id);
+          savePayments();
+          renderPayments(filterStudentSelect.value);
+        }
+      }
+    });
+
+    addPaymentBtn.addEventListener('click', (e) => { e.preventDefault(); addPayment(); });
+    filterStudentSelect.addEventListener('change', () => renderPayments(filterStudentSelect.value));
+    computeOutstandingBtn.addEventListener('click', () => {
+      const sid = Number(filterStudentSelect.value);
+      if (!sid) { alert('Pilih siswa pada filter untuk menghitung tunggakan.'); return; }
+      computeOutstanding(sid);
+    });
+
+    populateFinanceStudentSelects();
+    renderPayments();
+  }
+
+  const roleSelect = document.querySelector('#roleSelect');
+  const roleNotice = document.querySelector('#roleNotice');
+  const roleAccessRules = {
+    Admin: ['gradesManager','attendanceManager','scheduleManager','financeManager'],
+    Guru: ['gradesManager','attendanceManager','scheduleManager'],
+    Siswa: ['gradesManager','attendanceManager'],
+    'Orang Tua': ['gradesManager','attendanceManager']
+  };
+
+  function applyRoleAccess(role) {
+    const allowed = new Set(roleAccessRules[role] || []);
+    ['gradesManager','attendanceManager','scheduleManager','financeManager'].forEach(id => {
+      const section = document.querySelector(`#${id}`);
+      if (section) section.classList.toggle('hidden', !allowed.has(id));
+    });
+    if (roleNotice) roleNotice.textContent = `Akses: ${role}`;
+  }
+
+  if (roleSelect) {
+    roleSelect.addEventListener('change', () => applyRoleAccess(roleSelect.value));
+    applyRoleAccess(roleSelect.value);
+  }
   subjectsTableBody.addEventListener('click', (e) => {
     const delBtn = e.target.closest('.delete-subject');
     if (delBtn) {

@@ -13,6 +13,16 @@
         <h1>SMA Negeri</h1>
         <p>Unggul, Kreatif, Berkarakter</p>
       </div>
+      <div class="role-panel">
+        <label for="roleSelect">Role</label>
+        <select id="roleSelect">
+          <option value="Admin">Admin</option>
+          <option value="Guru">Guru</option>
+          <option value="Siswa">Siswa</option>
+          <option value="Orang Tua">Orang Tua</option>
+        </select>
+        <p id="roleNotice" class="role-notice">Akses: Admin</p>
+      </div>
       <button class="nav-toggle" aria-label="Buka navigasi">☰</button>
       <nav class="site-nav">
         <a href="#home">Beranda</a>
@@ -507,6 +517,34 @@
                 <button type="submit" class="btn btn-primary">Tempatkan</button>
               </form>
             </div>
+          </div>
+        </div>
+
+        <div class="manager-card" id="reportsManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Laporan</h3>
+            <p>Cetak laporan siswa, absensi, nilai, dan keuangan.</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <button id="printStudentsReport" class="btn btn-secondary">Cetak Daftar Siswa (PDF)</button>
+              <label for="reportAttendanceDate">Absensi (Tanggal)</label>
+              <input id="reportAttendanceDate" type="date" />
+              <button id="printAttendanceReport" class="btn btn-secondary">Cetak Absensi</button>
+              <label for="reportGradesFilter">Nilai (Filter)</label>
+              <select id="reportGradesFilter"><option value="">Semua Siswa</option></select>
+              <button id="printGradesReport" class="btn btn-secondary">Cetak Nilai</button>
+            </div>
+            <div class="toolbar-filters">
+              <label for="reportFinanceMonth">Keuangan (Bulan)</label>
+              <input id="reportFinanceMonth" type="month" />
+              <button id="printFinanceReport" class="btn btn-secondary">Cetak Keuangan</button>
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <p style="color:var(--muted);">Gunakan kontrol di atas untuk memilih periode atau filter, lalu klik cetak.</p>
           </div>
         </div>
       </div>

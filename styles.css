@@ -58,12 +58,26 @@ textarea {
   padding: 1rem 0;
 }
 
-.brand h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
+  .role-panel {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
 
-.brand p {
+  .role-panel select {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.6rem 0.8rem;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .role-notice {
+    margin: 0;
+    font-weight: 600;
+  }
   margin: 0.25rem 0 0;
   color: var(--muted);
 }

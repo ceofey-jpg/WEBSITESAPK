@@ -212,7 +212,9 @@
             </div>
             <div class="form-row">
               <label for="studentMajor">Jurusan</label>
-              <input id="studentMajor" name="studentMajor" type="text" placeholder="IPA / IPS / Bahasa" required />
+              <select id="studentMajor" name="studentMajor" required>
+                <option value="">Pilih jurusan</option>
+              </select>
             </div>
             <div class="form-row">
               <label for="studentStatus">Status</label>
@@ -226,6 +228,100 @@
           </form>
         </div>
         <input id="studentImport" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+        
+        <div class="manager-card" id="classMajorManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Kelola Kelas & Jurusan</h3>
+            <p>Tambah/hapus kelas dan jurusan serta tempatkan siswa ke kelas/jurusan.</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <button id="addClassButton" class="btn btn-primary">Tambah Kelas</button>
+              <button id="addMajorButton" class="btn btn-secondary">Tambah Jurusan</button>
+              <button id="assignPlacementButton" class="btn btn-secondary">Penempatan Siswa</button>
+            </div>
+            <div class="toolbar-filters">
+              <input id="placementSearch" type="search" placeholder="Cari siswa untuk penempatan..." />
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <table class="student-table" id="classesTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Kelas</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <table class="student-table" id="majorsTable" style="margin-top:1rem;">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Jurusan</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <div class="student-form-card hidden" id="classFormCard">
+              <div class="student-form-header">
+                <h4 id="classFormTitle">Tambah Kelas</h4>
+                <button class="close-button" id="closeClassForm">×</button>
+              </div>
+              <form id="classForm">
+                <input type="hidden" id="classId" />
+                <div class="form-row">
+                  <label for="className">Nama Kelas</label>
+                  <input id="className" name="className" type="text" placeholder="X / XI / XII" required />
+                </div>
+                <button type="submit" class="btn btn-primary">Simpan Kelas</button>
+              </form>
+            </div>
+
+            <div class="student-form-card hidden" id="majorFormCard">
+              <div class="student-form-header">
+                <h4 id="majorFormTitle">Tambah Jurusan</h4>
+                <button class="close-button" id="closeMajorForm">×</button>
+              </div>
+              <form id="majorForm">
+                <input type="hidden" id="majorId" />
+                <div class="form-row">
+                  <label for="majorName">Nama Jurusan</label>
+                  <input id="majorName" name="majorName" type="text" placeholder="IPA / IPS / Bahasa" required />
+                </div>
+                <button type="submit" class="btn btn-primary">Simpan Jurusan</button>
+              </form>
+            </div>
+
+            <div class="student-form-card hidden" id="placementFormCard">
+              <div class="student-form-header">
+                <h4 id="placementFormTitle">Penempatan Siswa</h4>
+                <button class="close-button" id="closePlacementForm">×</button>
+              </div>
+              <form id="placementForm">
+                <div class="form-row">
+                  <label for="placementStudent">Pilih Siswa</label>
+                  <select id="placementStudent" required></select>
+                </div>
+                <div class="form-row">
+                  <label for="placementClass">Kelas</label>
+                  <select id="placementClass" required></select>
+                </div>
+                <div class="form-row">
+                  <label for="placementMajor">Jurusan</label>
+                  <select id="placementMajor" required></select>
+                </div>
+                <button type="submit" class="btn btn-primary">Tempatkan</button>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -86,6 +86,15 @@ let students = [
 ];
 let nextStudentId = students.length + 1;
 
+// load/save students to localStorage for persistence across reloads
+const storedStudents = JSON.parse(localStorage.getItem('students') || 'null');
+if (storedStudents && Array.isArray(storedStudents)) {
+  students = storedStudents;
+  nextStudentId = students.reduce((max, s) => Math.max(max, s.id), 0) + 1;
+} else {
+  localStorage.setItem('students', JSON.stringify(students));
+}
+
 function renderStudents() {
   const filtered = students.filter((student) => {
     const searchValue = studentSearch.value.trim().toLowerCase();
@@ -268,6 +277,8 @@ if (studentForm) {
       alert('Data siswa berhasil ditambahkan.');
     }
 
+    // persist students
+    localStorage.setItem('students', JSON.stringify(students));
     renderStudents();
     closeStudentFormCard();
   });
@@ -338,6 +349,180 @@ if (exportStudentPdfButton) {
 }
 
 renderStudents();
+
+/* --- Kelola Kelas, Jurusan, dan Penempatan Siswa --- */
+const classMajorSection = document.querySelector('#classMajorManager');
+if (classMajorSection) {
+  const addClassButton = document.querySelector('#addClassButton');
+  const addMajorButton = document.querySelector('#addMajorButton');
+  const assignPlacementButton = document.querySelector('#assignPlacementButton');
+  const placementSearch = document.querySelector('#placementSearch');
+
+  const classesTableBody = document.querySelector('#classesTable tbody');
+  const majorsTableBody = document.querySelector('#majorsTable tbody');
+
+  const classFormCard = document.querySelector('#classFormCard');
+  const classForm = document.querySelector('#classForm');
+  const classNameInput = document.querySelector('#className');
+  const closeClassForm = document.querySelector('#closeClassForm');
+
+  const majorFormCard = document.querySelector('#majorFormCard');
+  const majorForm = document.querySelector('#majorForm');
+  const majorNameInput = document.querySelector('#majorName');
+  const closeMajorForm = document.querySelector('#closeMajorForm');
+
+  const placementFormCard = document.querySelector('#placementFormCard');
+  const placementForm = document.querySelector('#placementForm');
+  const placementStudentSelect = document.querySelector('#placementStudent');
+  const placementClassSelect = document.querySelector('#placementClass');
+  const placementMajorSelect = document.querySelector('#placementMajor');
+  const closePlacementForm = document.querySelector('#closePlacementForm');
+
+  // storage
+  let classes = JSON.parse(localStorage.getItem('classes') || 'null');
+  let majors = JSON.parse(localStorage.getItem('majors') || 'null');
+
+  if (!classes) classes = ['X', 'XI', 'XII'];
+  if (!majors) majors = ['IPA', 'IPS', 'Bahasa'];
+  // ensure student form selects are populated
+  function populateStudentClassSelects() {
+    const opts = ['<option value="">Pilih kelas</option>'].concat(classes.map(c => `<option value="${c}">${c}</option>`)).join('');
+    studentClassSelect.innerHTML = opts;
+    placementClassSelect.innerHTML = opts;
+  }
+  function populateStudentMajorSelects() {
+    const opts = ['<option value="">Pilih jurusan</option>'].concat(majors.map(m => `<option value="${m}">${m}</option>`)).join('');
+    // student major select
+    studentMajorInput.innerHTML = opts;
+    placementMajorSelect.innerHTML = opts;
+  }
+
+  function saveClassesMajors() {
+    localStorage.setItem('classes', JSON.stringify(classes));
+    localStorage.setItem('majors', JSON.stringify(majors));
+  }
+
+  function renderClasses() {
+    classesTableBody.innerHTML = classes.map((c, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${c}</td>
+        <td><button class="btn btn-secondary delete-class" data-name="${c}">Hapus</button></td>
+      </tr>
+    `).join('');
+    populateStudentClassSelects();
+  }
+
+  function renderMajors() {
+    majorsTableBody.innerHTML = majors.map((m, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${m}</td>
+        <td><button class="btn btn-secondary delete-major" data-name="${m}">Hapus</button></td>
+      </tr>
+    `).join('');
+    populateStudentMajorSelects();
+  }
+
+  function openClassForm() { classFormCard.classList.remove('hidden'); }
+  function closeClassFormCard() { classFormCard.classList.add('hidden'); classForm.reset(); }
+  function openMajorForm() { majorFormCard.classList.remove('hidden'); }
+  function closeMajorFormCard() { majorFormCard.classList.add('hidden'); majorForm.reset(); }
+  function openPlacementForm() { placementFormCard.classList.remove('hidden'); populatePlacementStudentSelect(); }
+  function closePlacementFormCard() { placementFormCard.classList.add('hidden'); placementForm.reset(); }
+
+  function populatePlacementStudentSelect() {
+    const q = placementSearch.value.trim().toLowerCase();
+    const options = students
+      .filter(s => !q || s.name.toLowerCase().includes(q))
+      .map(s => `<option value="${s.id}">${s.name} — ${s.class || '-'} / ${s.major || '-'}</option>`).join('');
+    placementStudentSelect.innerHTML = '<option value="">Pilih siswa</option>' + options;
+  }
+
+  addClassButton.addEventListener('click', () => openClassForm());
+  closeClassForm.addEventListener('click', closeClassFormCard);
+  addMajorButton.addEventListener('click', () => openMajorForm());
+  closeMajorForm.addEventListener('click', closeMajorFormCard);
+  assignPlacementButton.addEventListener('click', () => openPlacementForm());
+  closePlacementForm.addEventListener('click', closePlacementFormCard);
+
+  classForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = classNameInput.value.trim();
+    if (!name) { alert('Nama kelas wajib diisi.'); return; }
+    if (!classes.includes(name)) classes.push(name);
+    saveClassesMajors();
+    renderClasses();
+    alert('Kelas disimpan.');
+    closeClassFormCard();
+  });
+
+  majorForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = majorNameInput.value.trim();
+    if (!name) { alert('Nama jurusan wajib diisi.'); return; }
+    if (!majors.includes(name)) majors.push(name);
+    saveClassesMajors();
+    renderMajors();
+    alert('Jurusan disimpan.');
+    closeMajorFormCard();
+  });
+
+  placementForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const studentId = Number(placementStudentSelect.value);
+    const cls = placementClassSelect.value;
+    const maj = placementMajorSelect.value;
+    if (!studentId || !cls || !maj) { alert('Pilih siswa, kelas, dan jurusan.'); return; }
+    const s = students.find(st => st.id === studentId);
+    if (s) {
+      s.class = cls;
+      s.major = maj;
+      localStorage.setItem('students', JSON.stringify(students));
+      renderStudents();
+      alert('Penempatan siswa berhasil.');
+      closePlacementFormCard();
+    }
+  });
+
+  // delete handlers
+  classesTableBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.delete-class');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    if (confirm(`Hapus kelas ${name}?`)) {
+      classes = classes.filter(c => c !== name);
+      // update students with that class
+      students.forEach(s => { if (s.class === name) s.class = ''; });
+      localStorage.setItem('students', JSON.stringify(students));
+      saveClassesMajors();
+      renderClasses();
+      renderStudents();
+    }
+  });
+
+  majorsTableBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.delete-major');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    if (confirm(`Hapus jurusan ${name}?`)) {
+      majors = majors.filter(m => m !== name);
+      students.forEach(s => { if (s.major === name) s.major = ''; });
+      localStorage.setItem('students', JSON.stringify(students));
+      saveClassesMajors();
+      renderMajors();
+      renderStudents();
+    }
+  });
+
+  placementSearch.addEventListener('input', populatePlacementStudentSelect);
+
+  // initial render
+  renderClasses();
+  renderMajors();
+  populateStudentClassSelects();
+  populateStudentMajorSelects();
+}
 
 /* --- Manajemen Guru, Mata Pelajaran, dan Wali Kelas (localStorage) --- */
 const teacherSection = document.querySelector('#teacherManager');

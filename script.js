@@ -736,6 +736,124 @@ if (teacherSection) {
         saveAll();
         renderTeachers();
       }
+
+        /* --- Absensi: input harian, rekap per kelas, laporan bulanan --- */
+        const attendanceSection = document.querySelector('#attendanceManager');
+        if (attendanceSection) {
+          const attendanceDate = document.querySelector('#attendanceDate');
+          const attendanceClass = document.querySelector('#attendanceClass');
+          const loadAttendance = document.querySelector('#loadAttendance');
+          const attendanceTableBody = document.querySelector('#attendanceTable tbody');
+          const saveAttendance = document.querySelector('#saveAttendance');
+          const recapDate = document.querySelector('#recapDate');
+          const showRecap = document.querySelector('#showRecap');
+          const reportMonth = document.querySelector('#reportMonth');
+          const reportClass = document.querySelector('#reportClass');
+          const exportCsv = document.querySelector('#exportCsv');
+          const exportPdf = document.querySelector('#exportPdf');
+
+          function loadAttendanceRecords() {
+            return JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+          }
+          function saveAttendanceRecords(records) {
+            localStorage.setItem('attendanceRecords', JSON.stringify(records));
+          }
+
+          // load classes & populate selects
+          const storedClasses = JSON.parse(localStorage.getItem('classes') || 'null') || ['X','XI','XII'];
+          function populateClassSelects() {
+            const opts = ['<option value="">Pilih kelas</option>'].concat(storedClasses.map(c => `<option value="${c}">${c}</option>`)).join('');
+            attendanceClass.innerHTML = opts;
+            reportClass.innerHTML = '<option value="">Semua Kelas</option>' + storedClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+          }
+
+          function renderAttendanceTable(dateStr, cls) {
+            if (!dateStr || !cls) {
+              attendanceTableBody.innerHTML = '<tr><td colspan="4">Pilih tanggal dan kelas lalu klik Muat Siswa.</td></tr>';
+              return;
+            }
+            const studentsInClass = students.filter(s => s.class === cls);
+            const records = loadAttendanceRecords();
+            const rows = studentsInClass.map((s, idx) => {
+              const rec = records.find(r => r.date === dateStr && r.class === cls && r.studentId === s.id);
+              const checked = rec && rec.status === 'Hadir' ? 'checked' : '';
+              return `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${s.name}</td>
+                  <td>${s.class || ''}</td>
+                  <td><input type="checkbox" data-id="${s.id}" class="attendance-checkbox" ${checked} /></td>
+                </tr>
+              `;
+            }).join('');
+            attendanceTableBody.innerHTML = rows || '<tr><td colspan="4">Tidak ada siswa di kelas ini.</td></tr>';
+          }
+
+          function saveDailyAttendance(dateStr, cls) {
+            if (!dateStr || !cls) { alert('Pilih tanggal dan kelas.'); return; }
+            const checkboxes = Array.from(document.querySelectorAll('.attendance-checkbox'));
+            const records = loadAttendanceRecords().filter(r => !(r.date === dateStr && r.class === cls));
+            const newRecs = checkboxes.map(cb => ({ date: dateStr, class: cls, studentId: Number(cb.dataset.id), status: cb.checked ? 'Hadir' : 'Alpha' }));
+            const all = records.concat(newRecs);
+            saveAttendanceRecords(all);
+            alert('Absensi tersimpan.');
+          }
+
+          function showRecapForDate(dateStr) {
+            if (!dateStr) { alert('Pilih tanggal rekap.'); return; }
+            const records = loadAttendanceRecords().filter(r => r.date === dateStr);
+            const byClass = {};
+            records.forEach(r => { if (!byClass[r.class]) byClass[r.class] = { hadir:0, alpha:0 }; if (r.status === 'Hadir') byClass[r.class].hadir++; else byClass[r.class].alpha++; });
+            const rows = Object.keys(byClass).map(cls => `<tr><td>${cls}</td><td>${byClass[cls].hadir}</td><td>${byClass[cls].alpha}</td></tr>`).join('');
+            const tableHtml = `
+              <table class="student-table" style="margin-top:1rem;">
+                <thead><tr><th>Kelas</th><th>Hadir</th><th>Alpha</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="3">Tidak ada data.</td></tr>'}</tbody>
+              </table>`;
+            // show below attendance table
+            attendanceTableBody.insertAdjacentHTML('afterend', tableHtml);
+          }
+
+          function generateMonthlyCsv(monthStr, cls) {
+            if (!monthStr) { alert('Pilih bulan.'); return; }
+            const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
+            const studentsMap = {};
+            students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
+            records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
+            const lines = [['Nama','Student ID','Hadir','Alpha']];
+            Object.keys(studentsMap).forEach(id => { const s = studentsMap[id]; lines.push([s.name, id, s.hadir, s.alpha]); });
+            const csv = lines.map(l => l.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+
+          function exportMonthlyPdf(monthStr, cls) {
+            if (!monthStr) { alert('Pilih bulan.'); return; }
+            const records = loadAttendanceRecords().filter(r => r.date.startsWith(monthStr));
+            const studentsMap = {};
+            students.forEach(s => { if (!cls || s.class === cls) studentsMap[s.id] = { name: s.name, hadir:0, alpha:0 }; });
+            records.forEach(r => { if (studentsMap[r.studentId]) { if (r.status === 'Hadir') studentsMap[r.studentId].hadir++; else studentsMap[r.studentId].alpha++; } });
+            const rows = Object.keys(studentsMap).map(id => [studentsMap[id].name, id, studentsMap[id].hadir, studentsMap[id].alpha]);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Laporan Absensi Bulanan ${monthStr}${cls ? ' - '+cls : ''}`, 14, 18);
+            doc.autoTable({ startY: 24, head: [['Nama','ID','Hadir','Alpha']], body: rows, theme:'grid' });
+            doc.save(`laporan-absensi-${monthStr}${cls ? '-'+cls : ''}.pdf`);
+          }
+
+          loadAttendance.addEventListener('click', () => renderAttendanceTable(attendanceDate.value, attendanceClass.value));
+          saveAttendance.addEventListener('click', () => saveDailyAttendance(attendanceDate.value, attendanceClass.value));
+          showRecap.addEventListener('click', () => { document.querySelectorAll('table.student-table + table.student-table').forEach(n => n.remove()); showRecapForDate(recapDate.value); });
+          exportCsv.addEventListener('click', () => generateMonthlyCsv(reportMonth.value, reportClass.value));
+          exportPdf.addEventListener('click', () => exportMonthlyPdf(reportMonth.value, reportClass.value));
+
+          populateClassSelects();
+        }
     }
   });
 

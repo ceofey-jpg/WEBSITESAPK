@@ -39,6 +39,52 @@
             <a href="#program" class="btn btn-secondary">Program Belajar</a>
           </div>
         </div>
+        
+        <div class="manager-card" id="attendanceManager" style="margin-top:1.5rem;">
+          <div class="section-header">
+            <h3>Absensi Harian</h3>
+            <p>Input kehadiran harian, rekap per kelas, dan laporan bulanan.</p>
+          </div>
+
+          <div class="student-toolbar">
+            <div class="toolbar-actions">
+              <label for="attendanceDate">Tanggal</label>
+              <input id="attendanceDate" type="date" />
+              <label for="attendanceClass">Kelas</label>
+              <select id="attendanceClass"><option value="">Pilih kelas</option></select>
+              <button id="loadAttendance" class="btn btn-secondary">Muat Siswa</button>
+              <button id="saveAttendance" class="btn btn-primary">Simpan Absensi</button>
+            </div>
+            <div class="toolbar-filters">
+              <label for="recapDate">Rekap tanggal</label>
+              <input id="recapDate" type="date" />
+              <button id="showRecap" class="btn btn-secondary">Tampilkan Rekap</button>
+            </div>
+          </div>
+
+          <div class="student-panel">
+            <table class="student-table" id="attendanceTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Nama</th>
+                  <th>Kelas</th>
+                  <th>Hadir</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+
+            <div style="margin-top:1rem; display:flex; gap:0.75rem; align-items:center;">
+              <label for="reportMonth">Bulan</label>
+              <input id="reportMonth" type="month" />
+              <label for="reportClass">Kelas</label>
+              <select id="reportClass"><option value="">Semua Kelas</option></select>
+              <button id="exportCsv" class="btn btn-secondary">Export CSV</button>
+              <button id="exportPdf" class="btn btn-secondary">Export PDF</button>
+            </div>
+          </div>
+        </div>
         <div class="hero-card">
           <h3>Informasi Terbaru</h3>
           <ul>
